@@ -1,4 +1,5 @@
-import { mkdir, rm, stat } from "node:fs/promises";
+import { execSync } from "node:child_process";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, type Browser, type Cookie, type Page } from "@playwright/test";
@@ -57,7 +58,12 @@ export async function logIn(page: Page, site: E2eSite): Promise<void> {
   await page.goto(`${site.baseURL}/umbraco`);
 
   // The same fields @umbraco/playwright-testhelpers' LoginUiHelper uses.
-  await page.locator('[name="username"]').fill(USER.email);
+  try {
+    await page.locator('[name="username"]').fill(USER.email);
+  } catch (error) {
+    await dumpSiteThreads(site);
+    throw error;
+  }
   await page.locator('[name="password"]').fill(USER.password);
 
   await withSiteLock(site, async () => {
@@ -65,6 +71,23 @@ export async function logIn(page: Page, site: E2eSite): Promise<void> {
     // Hold the lock until the code exchange has finished and the backoffice has loaded.
     await expect(page).toHaveURL(/\/umbraco\/section\//);
   });
+}
+
+/**
+ * TEMPORARY diagnostic for a CI-only hang: writes the site process's managed stacks to
+ * `e2e/test-results/` (uploaded with a failed run) with dotnet-stack. Does nothing locally.
+ */
+async function dumpSiteThreads(site: E2eSite): Promise<void> {
+  if (!process.env.CI) return;
+  const name = `SearchManager.${site.umbracoSearch ? "SearchSite" : "Site"}${site.major}`;
+  try {
+    const pid = execSync(`pgrep -f -n "${name}"`).toString().trim();
+    const stacks = execSync(`$HOME/.dotnet/tools/dotnet-stack report -p ${pid}`, { maxBuffer: 64 * 1024 * 1024 });
+    await mkdir("e2e/test-results", { recursive: true });
+    await writeFile(`e2e/test-results/stacks-${site.name}-${Date.now()}.txt`, stacks);
+  } catch (error) {
+    console.error(`Could not dump the threads of ${name}: ${String(error)}`);
+  }
 }
 
 /**

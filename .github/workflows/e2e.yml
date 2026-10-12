@@ -66,6 +66,9 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - run: bunx playwright install --with-deps chromium
 
+      # TEMPORARY: dotnet-stack lets a timed-out login dump the site's threads (e2e/support/auth.ts).
+      - run: dotnet tool install -g dotnet-stack
+
       # e2e/prepare.ts builds the client and the sites for this major before Playwright starts them.
       - run: bun run e2e
 
