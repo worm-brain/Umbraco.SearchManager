@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Umbraco SearchManager">
+  <title>Umbraco SearchManager</title>
+  <rect width="128" height="128" rx="28" fill="#B86E00"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="56" cy="44" rx="22" ry="8"/>
+    <path d="M34 44V80A22 8 0 0 0 78 80V44"/>
+    <path d="M34 62A22 8 0 0 0 78 62"/>
+    <!-- tile-coloured halo so the lens sits in front of the database -->
+    <circle cx="76" cy="72" r="12" fill="#B86E00" stroke="#B86E00" stroke-width="12"/>
+    <circle cx="76" cy="72" r="12"/>
+    <path d="M84.5 80.5L92 88"/>
+  </g>
+</svg>

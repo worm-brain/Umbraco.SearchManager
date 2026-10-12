@@ -1,3 +1,5 @@
+<img src="assets/icon/umbraco-searchmanager.svg" alt="" width="96" height="96">
+
 # Umbraco Search Manager
 
 A search index manager for the Umbraco backoffice and a drop-in replacement for the built-in
