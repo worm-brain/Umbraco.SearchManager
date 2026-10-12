@@ -1,0 +1,110 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <RootNamespace>Umbraco.Community.SearchManager</RootNamespace>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <!-- Transitive packages resolve at the Umbraco 17.0.0 floor here; consuming sites resolve (and audit) their own newer versions. -->
+    <NuGetAuditMode>direct</NuGetAuditMode>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- The Umbraco. prefix is reserved on nuget.org, so community packages publish as Umbraco.Community.*. -->
+    <PackageId>Umbraco.Community.SearchManager</PackageId>
+    <Product>Umbraco.Community.SearchManager</Product>
+    <Title>Umbraco Search Manager</Title>
+    <Description>A search index manager for the Umbraco backoffice and a drop-in replacement for the Examine Management dashboard: bulk rebuilds, live status, rebuild history and click-to-filter search.</Description>
+    <PackageTags>umbraco;umbraco-marketplace;search;examine;lucene;indexes</PackageTags>
+    <!--
+      One package version line per Umbraco major: 17.x.y for Umbraco 17, 18.x.y for 18. Releases set
+      the full version from the tag; local builds are $(UmbracoMajor).0.0-dev. The client build stamps it into
+      umbraco-package.json (Client/scripts/umbraco-package-version.ts).
+    -->
+    <Version>$(UmbracoMajor).0.0-dev</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Range per major. -->
+    <PackageReference Include="Umbraco.Cms.Web.Website" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" />
+    <PackageReference Include="Umbraco.Cms.Examine.Lucene" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Umbraco.Community.SearchManager.Core\Umbraco.Community.SearchManager.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Lit client source is not part of the package; only its build output in wwwroot is. -->
+    <Content Remove="Client\**" />
+    <None Include="Client\public\umbraco-package.json" Pack="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Umbraco.Community.SearchManager.Api.Tests" />
+  </ItemGroup>
+
+  <!--
+    The client's build output is gitignored, so packing has to build it. This happens on `dotnet pack` only
+    (the CLI sets _IsPacking), so C#-only work never needs Bun. Pass -p:BuildClient=true to build it on an
+    ordinary `dotnet build` too. Pattern taken from Umbraco.RichDictionary.
+  -->
+  <PropertyGroup>
+    <BuildClient Condition="'$(BuildClient)' == ''">$(_IsPacking)</BuildClient>
+    <ClientDirectory>$(MSBuildProjectDirectory)\Client\</ClientDirectory>
+    <ClientOutputDirectory>wwwroot\App_Plugins\UmbracoCommunitySearchManager\</ClientOutputDirectory>
+  </PropertyGroup>
+
+  <!--
+    Runs before static web assets are resolved. They are discovered from @(Content), whose wwwroot glob was
+    evaluated before this target wrote the files, so the client output is re-globbed afterwards: without that,
+    a pack from a clean checkout ships no client, and a rebuild with new chunk hashes points at deleted files.
+    The NoBuild check is needed because a BeforeTargets hook still runs when its target is skipped.
+  -->
+  <Target
+    Name="BuildClient"
+    BeforeTargets="ResolveProjectStaticWebAssets"
+    Condition="'$(BuildClient)' == 'true' and '$(NoBuild)' != 'true'"
+  >
+    <Exec
+      Command="bun --version"
+      IgnoreExitCode="true"
+      EchoOff="true"
+      StandardOutputImportance="low"
+      StandardErrorImportance="low"
+    >
+      <Output TaskParameter="ExitCode" PropertyName="_BunExitCode" />
+    </Exec>
+    <Error
+      Condition="'$(_BunExitCode)' != '0'"
+      Text="Bun is required to build the Search Manager backoffice client, but 'bun' was not found on PATH. Install it from https://bun.sh and try again."
+    />
+
+    <Exec
+      Command="bun install --frozen-lockfile"
+      WorkingDirectory="$(ClientDirectory)"
+      Condition="Exists('$(ClientDirectory)bun.lock')"
+    />
+    <!-- Passes the version on so a -p:Version override reaches umbraco-package.json too. -->
+    <Exec
+      Command="bun run build"
+      WorkingDirectory="$(ClientDirectory)"
+      EnvironmentVariables="SEARCH_MANAGER_VERSION=$(PackageVersion)"
+    />
+
+    <ItemGroup>
+      <Content Remove="$(ClientOutputDirectory)**" />
+      <Content Include="$(ClientOutputDirectory)**" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Catches packs that skip BuildClient (a no-build `dotnet pack`, or `msbuild -t:Pack`) on a checkout with no client build. -->
+  <Target Name="EnsureClientBuilt" BeforeTargets="GenerateNuspec">
+    <Error
+      Condition="!Exists('$(ClientOutputDirectory)umbraco-community-search-manager.js')"
+      Text="The backoffice client has not been built, so the package would ship without it. Pack with `dotnet pack` (which builds it), or run `bun run build` in src/Umbraco.Community.SearchManager/Client first."
+    />
+  </Target>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+</Project>

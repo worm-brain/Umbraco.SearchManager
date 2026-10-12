@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/SearchManager.Site17/SearchManager.Site17.csproj" />
+    <Project Path="samples/SearchManager.Site18/SearchManager.Site18.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Umbraco.Community.SearchManager.Core/Umbraco.Community.SearchManager.Core.csproj" />
+    <Project Path="src/Umbraco.Community.SearchManager/Umbraco.Community.SearchManager.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Umbraco.Community.SearchManager.Api.Tests/Umbraco.Community.SearchManager.Api.Tests.csproj" />
+    <Project Path="tests/Umbraco.Community.SearchManager.Core.Tests/Umbraco.Community.SearchManager.Core.Tests.csproj" />
+  </Folder>
+</Solution>

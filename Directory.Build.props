@@ -1,0 +1,80 @@
+<Project>
+  <!--
+    Shared build settings for every project in the repo.
+    Strict by default: nullable on, warnings are errors, the recommended analyzer set is on.
+  -->
+  <!--
+    Which Umbraco major this build targets. One source tree builds one package per major:
+    `dotnet build` targets 17; `dotnet build -p:UmbracoMajor=18` targets 18. It must be a global
+    property (command line) so it reaches project references and restore alike.
+    Each major gets its own bin/obj folders so switching between them never mixes restore assets.
+  -->
+  <PropertyGroup>
+    <UmbracoMajor Condition="'$(UmbracoMajor)' == ''">17</UmbracoMajor>
+    <BaseIntermediateOutputPath Condition="'$(UmbracoMajor)' != '17'"
+      >obj\u$(UmbracoMajor)\</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition="'$(UmbracoMajor)' != '17'">bin\u$(UmbracoMajor)\</BaseOutputPath>
+    <DefineConstants>$(DefineConstants);UMBRACO_$(UmbracoMajor)</DefineConstants>
+    <!-- The SDK only excludes the active major's bin/obj from item globs; exclude the other majors' too. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+
+    <Authors>Jack Stunell</Authors>
+    <Copyright>Copyright (c) 2026 Jack Stunell</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/worm-brain/Umbraco.SearchManager</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/worm-brain/Umbraco.SearchManager</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- SourceLink is built into the .NET SDK; these make the symbols and sources reproducible. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'"
+      >true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- Shipped code (src/) carries XML docs; packable projects ship symbols packages. -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- House-style package icon; the 128 px PNG is what NuGet and the marketplace show. -->
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <None
+      Include="$(MSBuildThisFileDirectory)assets\icon\umbraco-searchmanager-128.png"
+      Pack="true"
+      PackagePath="icon.png"
+      Visible="false"
+    />
+    <!--
+      NuGet gets its own short readme: nuget.org renders no relative links, images or
+      raw HTML, and a published readme cannot be changed, so the screenshot-heavy root README stays
+      on GitHub and this one links to it.
+    -->
+    <None
+      Include="$(MSBuildThisFileDirectory)assets\nuget\README.md"
+      Pack="true"
+      PackagePath="README.md"
+      Visible="false"
+    />
+  </ItemGroup>
+
+  <!-- Tests and samples are never packed. -->
+  <PropertyGroup Condition="!$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Umbraco 17 sample site for developing and testing the package. Not packed. -->
+  <PropertyGroup>
+    <!-- Disable compression: the backoffice files are precompressed and dotnet must not handle them. -->
+    <CompressionEnabled>false</CompressionEnabled>
+    <!-- Sample code is not shipped, so it does not need XML docs. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      SixLabors.ImageSharp 3.1.12 comes in through Umbraco.Cms and is flagged by these advisories
+      (published 2026-10-07; fixed only in 4.1.2, which Umbraco 17/18 do not build against). The sample
+      site is not shipped, and the package itself does not reference ImageSharp. Remove these once
+      Umbraco ships a patched ImageSharp.
+    -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms" />
+    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Opt-in to app-local ICU to ensure consistent globalization APIs across different platforms -->
+    <PackageReference Include="Microsoft.ICU.ICU4C.Runtime" />
+    <RuntimeHostConfigurationOption
+      Include="System.Globalization.AppLocalIcu"
+      Value="72.1.0.3"
+      Condition="$(RuntimeIdentifier.StartsWith('linux')) or $(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and !$([MSBuild]::IsOSPlatform('osx')))"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Sample content and a custom index are shared source, compiled into each sample site. -->
+    <Compile Include="..\Shared\**\*.cs" Link="Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Umbraco.Community.SearchManager\Umbraco.Community.SearchManager.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Razor files are needed for the backoffice to work correctly -->
+    <CopyRazorGenerateFilesToPublishDirectory>true</CopyRazorGenerateFilesToPublishDirectory>
+    <!-- Remove RazorCompileOnBuild and RazorCompileOnPublish when not using ModelsMode InMemoryAuto -->
+    <RazorCompileOnBuild>false</RazorCompileOnBuild>
+    <RazorCompileOnPublish>false</RazorCompileOnPublish>
+  </PropertyGroup>
+</Project>

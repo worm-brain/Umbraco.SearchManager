@@ -1,0 +1,14 @@
+{
+  "id": "Umbraco.Community.SearchManager",
+  "name": "Search Manager",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Umbraco Community Search Manager Bundle",
+      "alias": "Umbraco.Community.SearchManager.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/UmbracoCommunitySearchManager/umbraco-community-search-manager.js"
+    }
+  ]
+}

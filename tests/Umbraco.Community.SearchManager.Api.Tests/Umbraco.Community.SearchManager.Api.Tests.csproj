@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the package project: the index sources and the Management API. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Umbraco.Community.SearchManager.Api.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pin the Umbraco version we develop against for this major (the package itself floats from the floor). -->
+    <PackageReference Include="Umbraco.Cms.Web.Website" VersionOverride="$(UmbracoDevVersion)" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" VersionOverride="$(UmbracoDevVersion)" />
+    <PackageReference Include="Umbraco.Cms.Examine.Lucene" VersionOverride="$(UmbracoDevVersion)" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Umbraco.Community.SearchManager\Umbraco.Community.SearchManager.csproj" />
+  </ItemGroup>
+</Project>

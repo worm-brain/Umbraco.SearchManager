@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Index and query contracts shared by every search source, plus the logic that needs no CMS:
+    the simple-syntax parser, the query model and its compilers.
+    Must never reference an Umbraco package; a Core.Tests test enforces it.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Umbraco.Community.SearchManager.Core</RootNamespace>
+    <PackageId>Umbraco.Community.SearchManager.Core</PackageId>
+    <!-- Versioned with the package for each major, so source packages reference the matching line. -->
+    <Version>$(UmbracoMajor).0.0-dev</Version>
+    <Description>Contracts and shared logic for Umbraco Search Manager. Reference this to add a search source.</Description>
+    <PackageTags>umbraco;search;examine;lucene</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Umbraco.Community.SearchManager.Core.Tests" />
+  </ItemGroup>
+</Project>
