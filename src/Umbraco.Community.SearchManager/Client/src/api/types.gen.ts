@@ -251,6 +251,10 @@ export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Can
 
 export type RebuildTrigger = 'User' | 'Other';
 
+export type SearchManagerSettings = {
+    hideCoreExamineDashboard: boolean;
+};
+
 export type ServerInfo = {
     machineName: string;
     role: ServerRoleModel;
@@ -845,3 +849,30 @@ export type GetServerResponses = {
 };
 
 export type GetServerResponse = GetServerResponses[keyof GetServerResponses];
+
+export type GetSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/settings';
+};
+
+export type GetSettingsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetSettingsResponses = {
+    /**
+     * OK
+     */
+    200: SearchManagerSettings;
+};
+
+export type GetSettingsResponse = GetSettingsResponses[keyof GetSettingsResponses];

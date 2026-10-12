@@ -61,6 +61,9 @@ All notable changes to this project are documented here. The format follows
   drawer shows the stored fields when the index uses the Examine provider. Show query shows the
   `SearchAsync` call in C#.
 - Explore and Diagnose open on the index a link names with `?index=`.
+- The core Examine Management dashboard (and its field modals) is hidden, so Settings has one
+  place for indexes. Set `SearchManager:HideCoreExamineDashboard` to `false` to keep it; see
+  `docs/reference/configuration.md`.
 - Explore results show the document type's icon.
 - A Search Manager box on Umbraco Search's index page (with the adapter package): the last
   rebuild, the runs before it and the field count, with links to Explore, field statistics and
