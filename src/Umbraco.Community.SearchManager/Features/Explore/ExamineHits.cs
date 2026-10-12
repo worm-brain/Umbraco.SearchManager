@@ -43,6 +43,7 @@ internal static class ExamineHits
             Id: result.Id,
             Score: float.IsFinite(result.Score) ? result.Score : null,
             Name: name,
+            Icon: First("__Icon"),
             DocumentType: First("__NodeTypeAlias"),
             EntityType: First("__IndexType"),
             Key: First("__Key"),

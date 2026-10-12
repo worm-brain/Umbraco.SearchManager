@@ -42,7 +42,8 @@ public sealed class GetExploreSchemaController(
                 schema.Aliases,
                 lookup.Source.Operators,
                 cultures,
-                schema.DocumentCount
+                schema.DocumentCount,
+                lookup.Source.Unsupported
             )
         );
     }

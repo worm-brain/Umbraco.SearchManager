@@ -37,6 +37,10 @@ internal sealed class ExamineExploreSource(
     public IReadOnlyList<FieldTypeOperators> Operators => FieldOperators.All;
 
     /// <inheritdoc />
+    /// <remarks>Lucene runs every chip form; raw Lucene depends on the target's capabilities.</remarks>
+    public IReadOnlyList<UnsupportedFilter> Unsupported => [];
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<ExploreTarget>> GetTargetsAsync(CancellationToken cancellationToken)
     {
         // Indexes another source owns (Umbraco Search's physical indexes) are explored there.
@@ -132,11 +136,12 @@ internal sealed class ExamineExploreSource(
 
         // Without words to rank by every score is equal, so the newest documents come first,
         // as the prototype's "whole index" view shows them.
-        IQueryExecutor executor =
+        bool newestFirst =
             !compilation.HasScoringClause
-            && schema.Resolve(UpdateDateField) is { Type: FieldType.Date }
-                ? operation.OrderByDescending(new SortableField(UpdateDateField, SortType.Long))
-                : operation;
+            && schema.Resolve(UpdateDateField) is { Type: FieldType.Date };
+        IQueryExecutor executor = newestFirst
+            ? operation.OrderByDescending(new SortableField(UpdateDateField, SortType.Long))
+            : operation;
 
         // skipTakeMaxResults bounds the collector to the page asked for, as the core dashboard
         // does (Umbraco #17920).
@@ -153,7 +158,8 @@ internal sealed class ExamineExploreSource(
                 results.TotalItemCount,
                 [.. results.Select(result => ExamineHits.ToHit(result, query.Culture))],
                 compilation.Query,
-                compilation.Skipped
+                compilation.Skipped,
+                newestFirst
             )
         );
     }
@@ -504,7 +510,7 @@ internal sealed class ExamineExploreSource(
     private LuceneIndex[] IndexesBehind(ISearcher searcher)
     {
         ISearcher[] searchers = searcher is MultiIndexSearcher multi
-            ? [.. multi.Searchers]
+            ? SearchersOf(multi)
             : [searcher];
         return
         [
@@ -515,6 +521,22 @@ internal sealed class ExamineExploreSource(
                 ),
         ];
     }
+
+    /// <summary>The searchers a multi-index searcher combines.</summary>
+    /// <param name="multi">The multi-index searcher.</param>
+    /// <returns>Its searchers.</returns>
+    /// <remarks>
+    /// Read by name: the property's type differs between Examine 3 and Examine 4 (which Umbraco
+    /// Search brings), so a compiled call binds to one signature and throws
+    /// <see cref="MissingMethodException"/> under the other.
+    /// </remarks>
+    internal static ISearcher[] SearchersOf(MultiIndexSearcher multi) =>
+        typeof(MultiIndexSearcher)
+            .GetProperty(nameof(MultiIndexSearcher.Searchers))
+            ?.GetValue(multi)
+            is System.Collections.IEnumerable searchers
+            ? [.. searchers.OfType<ISearcher>()]
+            : [];
 
     private static ExploreCapabilities CapabilitiesOf(ISearcher searcher)
     {
@@ -544,6 +566,6 @@ internal sealed class ExamineExploreSource(
             );
 
         return IsMember(searcher)
-            || (searcher is MultiIndexSearcher multi && multi.Searchers.Any(IsMember));
+            || (searcher is MultiIndexSearcher multi && SearchersOf(multi).Any(IsMember));
     }
 }

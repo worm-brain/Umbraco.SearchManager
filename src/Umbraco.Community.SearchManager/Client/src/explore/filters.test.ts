@@ -104,6 +104,30 @@ describe("disabledReason", () => {
     expect(disabledReason(lucene, schema, other, term)).toBe("ExternalIndex does not take raw Lucene queries");
   });
 
+  it("disables a chip an engine rule names, with the rule's reason", () => {
+    const withRules = {
+      ...schema,
+      unsupported: [
+        { kind: "Text" as const, types: [], operators: [], exclude: true, reason: "Cannot exclude free text" },
+        {
+          kind: "Field" as const,
+          types: ["Text" as const],
+          operators: ["Phrase" as const],
+          exclude: null,
+          reason: "No phrases",
+        },
+      ],
+    };
+    const text: Filter = { kind: "Text", field: null, op: "Contains", value: "summer", exclude: true };
+    const phrase: Filter = { kind: "Field", field: "nodeName", op: "Phrase", value: "a b", exclude: false };
+    expect([
+      disabledReason(text, withRules, target, term),
+      disabledReason({ ...text, exclude: false }, withRules, target, term),
+      disabledReason(phrase, withRules, target, term),
+      disabledReason({ ...phrase, field: "__NodeTypeAlias", op: "Is" }, withRules, target, term),
+    ]).toEqual(["Cannot exclude free text", undefined, "No phrases", undefined]);
+  });
+
   it("disables nothing while the schema loads", () => {
     expect(disabledReason({ ...product, field: "colour" }, undefined, target, term)).toBeUndefined();
   });

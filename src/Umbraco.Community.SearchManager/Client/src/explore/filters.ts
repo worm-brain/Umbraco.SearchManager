@@ -6,6 +6,7 @@ import type {
   FilterKind,
   FilterOperator,
   IndexField,
+  UnsupportedFilter,
 } from "../api/index.js";
 
 /** Every `FilterKind`, for validating untrusted input such as a shared URL. */
@@ -170,8 +171,32 @@ export function operatorsFor(schema: ExploreSchema | undefined, type: FieldType)
 export type Term = (key: string, ...args: Array<string>) => string;
 
 /**
+ * The reason of the first engine rule (`schema.unsupported`, ADR 0016) that matches a chip.
+ *
+ * @param rules - The source's rules.
+ * @param filter - The chip.
+ * @param type - The type of the chip's field, or `undefined` for free text and raw queries.
+ * @returns The reason, or `undefined` when no rule matches.
+ */
+export function unsupportedReason(
+  rules: ReadonlyArray<UnsupportedFilter>,
+  filter: Filter,
+  type: FieldType | undefined,
+): string | undefined {
+  return rules.find(
+    (rule) =>
+      rule.kind === filter.kind &&
+      (rule.types.length === 0 || (type !== undefined && rule.types.includes(type))) &&
+      (rule.operators.length === 0 || rule.operators.includes(filter.op)) &&
+      (rule.exclude == null || rule.exclude === filter.exclude),
+  )?.reason;
+}
+
+/**
  * Why a chip cannot run on the current target, so it is drawn disabled and not sent (the server
- * also skips it). Value checks (is it a number, a date) are left to the server's `skipped` list.
+ * also skips it). The engine's own rules come first, so their reason names the engine (Umbraco
+ * Search cannot exclude free text, for example). Value checks (is it a number, a date) are left
+ * to the server's `skipped` list.
  *
  * @param filter - The chip.
  * @param schema - The target's schema; `undefined` while it loads, when nothing is disabled.
@@ -186,12 +211,14 @@ export function disabledReason(
   term: Term,
 ): string | undefined {
   if (!schema || !target) return undefined;
+  const field = filter.kind === "Field" ? resolveField(schema, filter.field ?? "") : undefined;
+  const rule = unsupportedReason(schema.unsupported ?? [], filter, field?.type);
+  if (rule) return rule;
   if (filter.kind === "Lucene") {
     return target.capabilities.nativeQuery ? undefined : term("searchManager_chipNoLucene", target.name);
   }
   if (filter.kind === "Text") return undefined;
 
-  const field = resolveField(schema, filter.field ?? "");
   if (!field) return term("searchManager_chipUnknownField", filter.field ?? "", target.name);
   if (!operatorsFor(schema, field.type).includes(filter.op)) {
     return term("searchManager_chipWrongOperator", term(`searchManager_op${filter.op}`), field.type.toLowerCase());

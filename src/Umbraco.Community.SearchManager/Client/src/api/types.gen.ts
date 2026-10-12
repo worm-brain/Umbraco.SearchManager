@@ -33,6 +33,7 @@ export type ExploreHit = {
     id: string;
     score?: number | null;
     name?: string | null;
+    icon?: string | null;
     documentType?: string | null;
     entityType?: string | null;
     key?: string | null;
@@ -56,6 +57,7 @@ export type ExploreResult = {
     hits: Array<ExploreHit>;
     query: string;
     skipped: Array<SkippedFilter>;
+    newestFirst: boolean;
 };
 
 export type ExploreSchema = {
@@ -64,6 +66,7 @@ export type ExploreSchema = {
     operators: Array<FieldTypeOperators>;
     cultures: Array<string>;
     documentCount?: number | null;
+    unsupported: Array<UnsupportedFilter>;
 };
 
 export type ExploreTarget = {
@@ -272,6 +275,14 @@ export type TermsResult = {
     type: FieldType;
     terms: Array<TermCount>;
     sampled: boolean;
+};
+
+export type UnsupportedFilter = {
+    kind: FilterKind;
+    types: Array<FieldType>;
+    operators: Array<FilterOperator>;
+    exclude?: boolean | null;
+    reason: string;
 };
 
 export type CompileExploreData = {

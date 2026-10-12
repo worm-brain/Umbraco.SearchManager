@@ -64,16 +64,17 @@ export class SearchManagerResultsElement extends UmbLitElement {
     if (!result) return nothing;
     const pages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
     const maxScore = Math.max(0, ...result.hits.map((hit) => hit.score ?? 0));
-    // Results sorted newest first (no ranking clause) come back without scores.
+    // Results sorted newest first (no ranking clause) come back without scores, and so do
+    // engines that rank without exposing scores (Umbraco Search).
     const ranked = result.hits.some((hit) => hit.score != null);
 
     return html`
       <div class="header">
         <strong role="status">
           ${
-            ranked || result.total === 0
-              ? this.localize.term("searchManager_resultsCount", result.total)
-              : this.localize.term("searchManager_resultsWhole", result.total)
+            result.newestFirst && result.total > 0
+              ? this.localize.term("searchManager_resultsWhole", result.total)
+              : this.localize.term("searchManager_resultsCount", result.total)
           }
         </strong>
         ${this.#renderColumnPicker()}
@@ -133,6 +134,7 @@ export class SearchManagerResultsElement extends UmbLitElement {
         <uui-table-cell class="mono nowrap">${hit.id}</uui-table-cell>
         <uui-table-cell class="name-cell">
           <span class="name">
+            ${hit.icon ? html`<umb-icon name=${hit.icon} aria-hidden="true"></umb-icon>` : nothing}
             <button
               type="button"
               class="open"

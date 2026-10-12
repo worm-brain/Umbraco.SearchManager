@@ -52,6 +52,16 @@ All notable changes to this project are documented here. The format follows
 - The Indexes view shows which server you are on. On a load-balanced site, a banner and a line in
   the rebuild confirmation say that core Examine rebuilds only affect this server, while Umbraco
   Search indexes rebuild on every server.
+- Explore on Umbraco Search indexes (with the adapter package): the same chips run through
+  Umbraco Search's `SearchAsync` with the culture picked. Words become the query; text, keyword,
+  number and date chips become typed filters, excluded chips negate them, and a document type
+  chip shows the alias and sends the content type key. Chips Umbraco Search cannot run (phrases,
+  starts with, fuzzy, is missing, excluded free text, raw Lucene) are struck through with the
+  reason and not sent. Results show name, icon, document type, object type and culture; the
+  drawer shows the stored fields when the index uses the Examine provider. Show query shows the
+  `SearchAsync` call in C#.
+- Explore and Diagnose open on the index a link names with `?index=`.
+- Explore results show the document type's icon.
 - A Search Manager box on Umbraco Search's index page (with the adapter package): the last
   rebuild, the runs before it and the field count, with links to Explore, field statistics and
   the index's history in Search Manager.

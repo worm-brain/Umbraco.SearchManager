@@ -15,6 +15,7 @@ export default {
     tabIndexes: "Indexes",
     tabExplore: "Explore",
     tabDiagnose: "Diagnose",
+    diagnoseIndex: (index: string) => `Diagnose ${index}`,
     diagnoseSoon: "Field statistics, analyzers and where a page is indexed. Coming in a later slice.",
 
     // Indexes view.
@@ -172,6 +173,9 @@ export default {
     queryCultureNote: (culture: string) => `The culture picks the _${culture} variant of fields that have one.`,
     queryCSharp: "C# with Examine",
     queryCSharpNative: "C# with Examine (NativeQuery: not every filter has a fluent form)",
+    queryRequest: (index: string) => `Umbraco Search request for ${index} (C#)`,
+    queryRequestNote:
+      "Document types are shown by alias; the filter sends the content type key. Without a culture, Umbraco Search finds only documents that do not vary by culture.",
     queryCopy: "Copy",
     queryNotSent: (chip: string, reason: string) => `Not sent: ${chip}. ${reason}.`,
     queryError: (message: string) => `Could not show the query: ${message}`,

@@ -34,6 +34,7 @@ export const schema: ExploreSchema = {
   ],
   cultures: ["da-DK", "en-US"],
   documentCount: 200,
+  unsupported: [],
 };
 
 /** A Lucene index target. */
