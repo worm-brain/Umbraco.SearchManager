@@ -61,4 +61,18 @@ internal static partial class RebuildLog
         Exception exception,
         string indexName
     );
+
+    /// <summary>A rebuild server event could not be sent.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">Why.</param>
+    /// <param name="eventType">The event type.</param>
+    [LoggerMessage(
+        Level = LogLevel.Debug,
+        Message = "Search Manager could not send the {EventType} server event"
+    )]
+    public static partial void RebuildEventNotSent(
+        this ILogger logger,
+        Exception exception,
+        string eventType
+    );
 }

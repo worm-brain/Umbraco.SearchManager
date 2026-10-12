@@ -97,4 +97,65 @@ describe("RebuildsPoller", () => {
 
     expect(pending).toHaveLength(0);
   });
+
+  it("does not poll while live events are on, but still fetches when asked", async () => {
+    const { timers, pending } = manualTimers();
+    let fetches = 0;
+    const poller = new RebuildsPoller(
+      async () => {
+        fetches++;
+        return { data: [run("Running")] };
+      },
+      () => {},
+      2000,
+      timers,
+    );
+    poller.setPolling(false);
+
+    await poller.refresh();
+
+    expect([fetches, pending.length]).toEqual([1, 0]);
+  });
+
+  it("polls again when live events drop", async () => {
+    const { timers, pending } = manualTimers();
+    const poller = new RebuildsPoller(
+      async () => ({ data: [run("Running")] }),
+      () => {},
+      2000,
+      timers,
+    );
+    poller.setPolling(false);
+    await poller.refresh();
+
+    await poller.setPolling(true);
+
+    expect(pending).toHaveLength(1);
+  });
+
+  it("folds refreshes asked for during a fetch into one more fetch", async () => {
+    let fetches = 0;
+    let release: () => void = () => {};
+    const poller = new RebuildsPoller(
+      () => {
+        fetches++;
+        return new Promise((resolve) => {
+          release = () => resolve({ data: [run("Succeeded")] });
+        });
+      },
+      () => {},
+      2000,
+      manualTimers().timers,
+    );
+
+    const first = poller.refresh();
+    void poller.refresh();
+    void poller.refresh();
+    release();
+    await first;
+    release();
+    await Promise.resolve();
+
+    expect(fetches).toBe(2);
+  });
 });

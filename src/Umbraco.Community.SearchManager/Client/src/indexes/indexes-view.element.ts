@@ -1,5 +1,6 @@
 import { css, customElement, html, nothing, state } from "@umbraco-cms/backoffice/external/lit";
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
+import { UMB_MANAGEMENT_API_SERVER_EVENT_CONTEXT } from "@umbraco-cms/backoffice/management-api";
 import { umbOpenModal } from "@umbraco-cms/backoffice/modal";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
@@ -8,6 +9,7 @@ import type { IndexSummary, RebuildHistoryEntry, RebuildRun } from "../api/types
 import { SEARCH_MANAGER_INDEX_DETAILS_MODAL } from "../details/index-details-modal.token.js";
 import { agoParts, latestEntryByIndex } from "../rebuilds/history-model.js";
 import { SEARCH_MANAGER_REBUILD_CONFIRM_MODAL } from "../rebuilds/rebuild-confirm-modal.token.js";
+import { REBUILD_EVENT_SOURCES, REBUILD_EVENT_TYPES } from "../rebuilds/rebuild-events.js";
 import {
   estimatePercent,
   formatDuration,
@@ -34,8 +36,10 @@ import { engineLabel, formatBytes, formatCount, healthLook } from "./index-forma
  * Rebuilds: rows have select boxes (disabled, with the reason, for an index that cannot rebuild
  * or is already queued), "Rebuild N indexes", "Rebuild all" and a per-row rebuild button. Each
  * opens the confirmation modal, then `POST /rebuilds` queues the runs on the server. The Rebuilds
- * panel shows the server's runs, polled while any is queued or running; the index list reloads
- * when a run finishes so counts are fresh.
+ * panel shows the server's runs. While Umbraco's server event hub is connected, each rebuild event
+ * re-reads `GET /rebuilds`; when it is not, the runs are polled while any is queued or running.
+ * The index list reloads when a run finishes so counts are fresh. Rows keep the server's order,
+ * so an update never moves a row.
  *
  * History: "Last rebuilt" comes from `GET /rebuilds/history/latest` (reloaded with the indexes);
  * the name and the details button open the details sidebar (history and provider properties).
@@ -83,6 +87,22 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   constructor() {
     super();
     this.consumeContext(UMB_NOTIFICATION_CONTEXT, (context) => (this.#notifications = context));
+
+    // Live status: poll only while the server event hub is not connected, and re-read the runs
+    // on each rebuild event (the server routes them only to users allowed to see them).
+    this.consumeContext(UMB_MANAGEMENT_API_SERVER_EVENT_CONTEXT, (context) => {
+      if (!context) return;
+      this.observe(
+        context.isConnected,
+        (connected) => void this.#poller.setPolling(connected !== true),
+        "searchManagerRebuildEventsConnected",
+      );
+      this.observe(
+        context.byEventSourcesAndEventTypes(REBUILD_EVENT_SOURCES, REBUILD_EVENT_TYPES),
+        () => void this.#poller.refresh(),
+        "searchManagerRebuildEvents",
+      );
+    });
   }
 
   /** Loads the indexes and the rebuild runs as soon as the view is in the page. */

@@ -28,3 +28,7 @@ All notable changes to this project are documented here. The format follows
   how long they took, the outcome, document counts, the server and the error of a failure. The
   Indexes view gets a "Last rebuilt" column and a details sidebar with the history and the
   index's provider properties. Umbraco Search rebuilds started elsewhere are recorded too.
+- Live rebuild status: the Rebuilds panel and the Indexes view update from Umbraco server events
+  as runs are queued, start, progress and finish, and only poll while the event connection is
+  down. Only users with Settings access receive the events (and Members access as well for
+  member indexes).
