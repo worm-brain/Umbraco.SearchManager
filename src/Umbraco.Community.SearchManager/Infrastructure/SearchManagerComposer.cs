@@ -10,6 +10,7 @@ using Umbraco.Community.SearchManager.Features.Indexes;
 using Umbraco.Community.SearchManager.Features.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Rebuilds.Events;
 using Umbraco.Community.SearchManager.Features.Rebuilds.History;
+using Umbraco.Community.SearchManager.Features.Settings;
 
 namespace Umbraco.Community.SearchManager.Infrastructure;
 
@@ -25,6 +26,11 @@ public sealed class SearchManagerComposer : IComposer
     public void Compose(IUmbracoBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
+
+        // Settings: the SearchManager configuration section (ADR 0017).
+        builder.Services.Configure<SearchManagerOptions>(
+            builder.Config.GetSection(SearchManagerOptions.SectionName)
+        );
 
         builder.Services.AddSingleton<IIndexSourceRegistry, IndexSourceRegistry>();
         builder.Services.AddSingleton<IIndexSource, ExamineIndexSource>();

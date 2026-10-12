@@ -51,6 +51,7 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     private readonly TimeProvider _timeProvider;
     private readonly IDistributedContentIndexRebuilder? _rebuilder;
     private readonly IIndexCommitMonitor? _commitMonitor;
+    private readonly ISearcherResolver? _searcherResolver;
 
     /// <summary>How long Umbraco Search may take to start a rebuild on this server.</summary>
     internal static readonly TimeSpan StartTimeout = TimeSpan.FromMinutes(2);
@@ -81,6 +82,7 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     /// </param>
     /// <param name="rebuilder">Umbraco Search's distributed rebuilder; null without <c>AddSearchCore()</c>.</param>
     /// <param name="commitMonitor">The Examine provider's commit monitor; null without the provider.</param>
+    /// <param name="searcherResolver">Umbraco Search's searcher resolver, for the search capability; null without <c>AddSearchCore()</c>.</param>
     public UmbracoSearchIndexSource(
         IOptions<IndexOptions> indexOptions,
         IExamineManager examineManager,
@@ -92,7 +94,8 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
         IIndexerResolver? indexerResolver = null,
         IActiveIndexManager? activeIndexManager = null,
         IDistributedContentIndexRebuilder? rebuilder = null,
-        IIndexCommitMonitor? commitMonitor = null
+        IIndexCommitMonitor? commitMonitor = null,
+        ISearcherResolver? searcherResolver = null
     )
     {
         ArgumentNullException.ThrowIfNull(indexOptions);
@@ -111,6 +114,7 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
         _timeProvider = timeProvider;
         _rebuilder = rebuilder;
         _commitMonitor = commitMonitor;
+        _searcherResolver = searcherResolver;
 
         ClaimedExamineIndexNames = new HashSet<string>(
             _registrations
@@ -417,7 +421,8 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
             SizeInBytes: physical?.Statistics?.SizeInBytes,
             Capabilities: new IndexCapabilities(
                 Rebuild: indexer is not null,
-                Search: false,
+                // Explore searches it through Umbraco Search's own searcher (ADR 0016).
+                Search: _searcherResolver?.GetSearcher(alias) is not null,
                 NativeQuery: false,
                 TermStatistics: physical?.IsLucene ?? false
             ),

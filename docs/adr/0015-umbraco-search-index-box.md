@@ -32,8 +32,7 @@ of its own.
   `unique`), rather than importing `@umbraco-cms/search/settings`, so the main client needs no
   Umbraco Search types.
 - Links open Search Manager views with `?index=<name>`. The Indexes view opens that index's
-  details sidebar. Explore and Diagnose should select that index when they read the parameter
-  (lane B / later slices); until then the links open those views unfocused.
+  details sidebar; Explore selects that index and the Diagnose placeholder names it (ADR 0016).
 
 ## Consequences
 

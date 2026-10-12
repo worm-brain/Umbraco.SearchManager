@@ -16,6 +16,10 @@ describe("explore view state in the URL", () => {
     expect(decodeExploreState(encodeExploreState(state))).toEqual(state);
   });
 
+  it("selects the index a Search Manager link names with ?index=", () => {
+    expect(decodeExploreState(new URLSearchParams("?index=Umb_PublishedContent")).target).toBe("Umb_PublishedContent");
+  });
+
   it("keeps an empty native query as native mode", () => {
     expect(decodeExploreState(encodeExploreState({ ...createExploreState(), native: "" })).native).toBe("");
   });

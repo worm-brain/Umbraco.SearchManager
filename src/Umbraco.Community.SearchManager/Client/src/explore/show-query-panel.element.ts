@@ -19,6 +19,9 @@ import {
 import { describeError } from "../shared/describe-error.js";
 import { describeFilter } from "./chip-format.js";
 
+/** The `language` of a compiled query that is a C# request rather than query text (ADR 0016). */
+const REQUEST_LANGUAGE = "C#";
+
 /** Wait after a change before compiling, so typing a chip value does not send a request per key. */
 const COMPILE_DEBOUNCE_MS = 150;
 
@@ -29,6 +32,9 @@ const COMPILE_DEBOUNCE_MS = 150;
  * - the query as Lucene parsed it (`Query.ToString()`), which shows analysis (lower-casing,
  *   numeric ranges) and the default fields bare words search;
  * - C# with Examine: the fluent API when every chip has a fluent form, otherwise `NativeQuery`.
+ *
+ * For an engine that takes a request object rather than query text (Umbraco Search, whose
+ * `language` is `C#`), the panel shows that request once, as C#.
  *
  * Compiled with `POST /explore/{target}/compile` whenever the chips, culture or raw query
  * change. Chips the target cannot run are listed under the query as not sent.
@@ -121,6 +127,26 @@ export class SearchManagerShowQueryPanelElement extends UmbLitElement {
     if (!compiled) return html`<uui-loader-bar></uui-loader-bar>`;
 
     const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
+    const notSent = this.notSent.map(
+      ({ filter, reason }) =>
+        html`<div class="not-sent">
+          ${this.localize.term("searchManager_queryNotSent", describeFilter(filter, this.schema, term).label, reason)}
+        </div>`,
+    );
+    // An engine that takes a request object (Umbraco Search) sends C# itself: one block.
+    if (compiled.language === REQUEST_LANGUAGE) {
+      return html`
+        <div class="blocks" role="region" aria-label=${this.localize.term("searchManager_queryPanel")}>
+          ${this.#block(
+            "csharp",
+            this.localize.term("searchManager_queryRequest", this.target?.name ?? ""),
+            compiled.code,
+            this.localize.term("searchManager_queryRequestNote"),
+          )}
+          ${notSent}
+        </div>
+      `;
+    }
     return html`
       <div class="blocks" role="region" aria-label=${this.localize.term("searchManager_queryPanel")}>
         ${this.#block("lucene", this.localize.term("searchManager_queryLucene", compiled.language), compiled.query)}
@@ -139,12 +165,7 @@ export class SearchManagerShowQueryPanelElement extends UmbLitElement {
           ),
           compiled.code,
         )}
-        ${this.notSent.map(
-          ({ filter, reason }) =>
-            html`<div class="not-sent">
-              ${this.localize.term("searchManager_queryNotSent", describeFilter(filter, this.schema, term).label, reason)}
-            </div>`,
-        )}
+        ${notSent}
       </div>
     `;
   }

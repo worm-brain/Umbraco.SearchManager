@@ -40,12 +40,17 @@ public sealed record ExploreTarget(
 /// <param name="Operators">The operators the source runs per field type.</param>
 /// <param name="Cultures">The site's cultures for the culture picker, ISO codes.</param>
 /// <param name="DocumentCount">Documents in the target, for field coverage; null when unknown.</param>
+/// <param name="Unsupported">
+/// Chips the source cannot run, with the reason (ADR 0016); the client draws them disabled and
+/// does not send them.
+/// </param>
 public sealed record ExploreSchema(
     IReadOnlyList<IndexField> Fields,
     IReadOnlyList<FieldAlias> Aliases,
     IReadOnlyList<FieldTypeOperators> Operators,
     IReadOnlyList<string> Cultures,
-    long? DocumentCount
+    long? DocumentCount,
+    IReadOnlyList<UnsupportedFilter> Unsupported
 );
 
 /// <summary>A search request from the Explore view.</summary>
@@ -76,7 +81,10 @@ public sealed record CompileRequest(
 );
 
 /// <summary>The query a search runs, three ways, for the show-query panel.</summary>
-/// <param name="Language">The engine's query language, for example <c>Lucene</c>.</param>
+/// <param name="Language">
+/// The engine's query language, for example <c>Lucene</c>; <c>C#</c> when the engine takes a
+/// request object rather than query text (Umbraco Search), so <paramref name="Query"/> is the code.
+/// </param>
 /// <param name="Query">The query sent to the engine.</param>
 /// <param name="Parsed">The query as the engine's parser read it, or null when it does not parse.</param>
 /// <param name="Code">C# that runs the same query with Examine.</param>
@@ -99,6 +107,7 @@ public sealed record NativeRequest(string Query);
 /// <param name="Id">The engine's document id (the node id for Umbraco content).</param>
 /// <param name="Score">The relevance score, or null when the results are not ranked.</param>
 /// <param name="Name">The node name, in the picked culture when the document varies.</param>
+/// <param name="Icon">The document type's icon, when the source knows it.</param>
 /// <param name="DocumentType">The document, media or member type alias.</param>
 /// <param name="EntityType">What the document is in Umbraco (<c>content</c>, <c>media</c>, <c>member</c>), when known.</param>
 /// <param name="Key">The Umbraco key, for the link to the editor, when known.</param>
@@ -109,6 +118,7 @@ public sealed record ExploreHit(
     string Id,
     float? Score,
     string? Name,
+    string? Icon,
     string? DocumentType,
     string? EntityType,
     string? Key,
@@ -122,11 +132,15 @@ public sealed record ExploreHit(
 /// <param name="Hits">The page of documents asked for.</param>
 /// <param name="Query">The query the engine ran, in its own language.</param>
 /// <param name="Skipped">Filters the source could not run, which were left out.</param>
+/// <param name="NewestFirst">
+/// Whether the hits are sorted newest first (nothing ranks them) rather than by relevance.
+/// </param>
 public sealed record ExploreResult(
     long Total,
     IReadOnlyList<ExploreHit> Hits,
     string Query,
-    IReadOnlyList<SkippedFilter> Skipped
+    IReadOnlyList<SkippedFilter> Skipped,
+    bool NewestFirst = false
 );
 
 /// <summary>A raw query the engine could not parse.</summary>
@@ -167,6 +181,12 @@ public interface IExploreSource
 
     /// <summary>The operators this engine runs per field type.</summary>
     IReadOnlyList<FieldTypeOperators> Operators { get; }
+
+    /// <summary>
+    /// Chips this engine cannot run, with the reason (ADR 0016), beyond the operators it does not
+    /// list in <see cref="Operators"/>; checked before them, so the reason names the engine.
+    /// </summary>
+    IReadOnlyList<UnsupportedFilter> Unsupported { get; }
 
     /// <summary>Runs a query.</summary>
     /// <param name="target">A target this source listed.</param>

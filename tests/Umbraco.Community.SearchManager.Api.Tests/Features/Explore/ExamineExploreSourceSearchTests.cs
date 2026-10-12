@@ -213,6 +213,21 @@ public sealed class ExamineExploreSourceSearchTests : IDisposable
         Assert.Equal(["3", "5", "2", "1", "4"], result.Hits.Select(hit => hit.Id));
     }
 
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("Text||Contains|home|False", false)]
+    public async Task SearchAsync_RankingClauseOrNot_SaysWhetherHitsAreNewestFirst(
+        string chip,
+        bool expected
+    )
+    {
+        // Act
+        ExploreResult result = await SearchAsync(chip.Length == 0 ? [] : [Chip(chip)]);
+
+        // Assert
+        Assert.Equal(expected, result.NewestFirst);
+    }
+
     [Fact]
     public async Task SearchAsync_Page_ReturnsTotalAndTheAskedSlice()
     {
