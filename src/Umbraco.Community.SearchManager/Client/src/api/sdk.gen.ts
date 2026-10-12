@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses } from './types.gen';
+import type { GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,6 +19,18 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 export class ExploreService {
+    public static getExploreFacets<ThrowOnError extends boolean = false>(options: Options<GetExploreFacetsData, ThrowOnError>): RequestResult<GetExploreFacetsResponses, GetExploreFacetsErrors, ThrowOnError> {
+        return (options.client ?? client).post<GetExploreFacetsResponses, GetExploreFacetsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/facets',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
     public static getExploreSchema<ThrowOnError extends boolean = false>(options: Options<GetExploreSchemaData, ThrowOnError>): RequestResult<GetExploreSchemaResponses, GetExploreSchemaErrors, ThrowOnError> {
         return (options.client ?? client).get<GetExploreSchemaResponses, GetExploreSchemaErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
@@ -48,6 +60,14 @@ export class ExploreService {
                 'Content-Type': 'application/json',
                 ...options.headers
             }
+        });
+    }
+    
+    public static getExploreTerms<ThrowOnError extends boolean = false>(options: Options<GetExploreTermsData, ThrowOnError>): RequestResult<GetExploreTermsResponses, GetExploreTermsErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetExploreTermsResponses, GetExploreTermsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/terms',
+            ...options
         });
     }
     

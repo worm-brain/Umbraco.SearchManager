@@ -37,7 +37,13 @@ public sealed class GetExploreSchemaController(
         FieldSchema schema = await lookup.Source!.GetSchemaAsync(lookup.Target!, cancellationToken);
         IReadOnlyList<string> cultures = await lookup.Source.GetCulturesAsync(cancellationToken);
         return Ok(
-            new ExploreSchema(schema.Fields, schema.Aliases, lookup.Source.Operators, cultures)
+            new ExploreSchema(
+                schema.Fields,
+                schema.Aliases,
+                lookup.Source.Operators,
+                cultures,
+                schema.DocumentCount
+            )
         );
     }
 }

@@ -22,6 +22,7 @@ import {
 } from "./explore-state.js";
 import { appendFilters, disabledReason, toggleFilter } from "./filters.js";
 import "./document-drawer.element.js";
+import "./fields-panel.element.js";
 import "./results.element.js";
 import "./search-box.element.js";
 
@@ -63,6 +64,10 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
 
   @state()
   private _error?: string;
+
+  /** The chips the last search sent; kept as the same array while they do not change. */
+  @state()
+  private _sent: Array<Filter> = [];
 
   #search?: AbortController;
   #schemaFor?: string;
@@ -126,6 +131,8 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
 
     const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
     const filters = this._state.filters.filter((filter) => !disabledReason(filter, this._schema, target, term));
+    // A new array only when the chips changed, so the fields panel does not count again on paging.
+    if (JSON.stringify(filters) !== JSON.stringify(this._sent)) this._sent = filters;
     this._loading = true;
     const { data, error, response } = await ExploreService.searchExplore({
       path: { target: target.name },
@@ -213,6 +220,13 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
           )}
         @search-manager-open-document=${(event: CustomEvent<string | undefined>) => this.#update({ doc: event.detail })}
       >
+        <search-manager-fields-panel
+          .target=${target}
+          .schema=${this._schema}
+          .filters=${this._sent}
+          .allFilters=${this._state.filters}
+          .culture=${this._state.culture}
+        ></search-manager-fields-panel>
         <uui-box class="results">
           <search-manager-results
             .result=${this._result}
@@ -324,6 +338,11 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       .results {
         flex: 999 1 30rem;
         min-width: 0;
+      }
+
+      search-manager-fields-panel {
+        flex: 1 1 16rem;
+        max-width: 22rem;
       }
 
       search-manager-document-drawer {

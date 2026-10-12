@@ -42,6 +42,7 @@ export type ExploreSchema = {
     aliases: Array<FieldAlias>;
     operators: Array<FieldTypeOperators>;
     cultures: Array<string>;
+    documentCount: null | number;
 };
 
 export type ExploreTarget = {
@@ -55,10 +56,30 @@ export type ExploreTarget = {
 
 export type ExploreTargetKind = 'Index' | 'Searcher';
 
+export type FacetsQuery = {
+    filters: Array<Filter>;
+    culture: null | string;
+    fields: Array<string>;
+    take: number;
+};
+
+export type FacetsResult = {
+    wholeIndex: boolean;
+    total: number;
+    fields: Array<FieldFacet>;
+};
+
 export type FieldAlias = {
     alias: string;
     field: string;
     label: string;
+};
+
+export type FieldFacet = {
+    field: string;
+    type: FieldType;
+    values: Array<TermCount>;
+    sampled: boolean;
 };
 
 export type FieldType = 'Text' | 'Keyword' | 'Number' | 'Date';
@@ -90,6 +111,7 @@ export type IndexCapabilities = {
 export type IndexField = {
     name: string;
     type: FieldType;
+    documents?: null | number;
 };
 
 export type IndexHealth = 'Healthy' | 'Rebuilding' | 'Unhealthy' | 'Corrupted' | 'Empty' | 'Incomplete' | 'Unknown';
@@ -139,6 +161,57 @@ export type SkippedFilter = {
     index: number;
     reason: string;
 };
+
+export type TermCount = {
+    value: string;
+    count: number;
+};
+
+export type TermsResult = {
+    field: string;
+    type: FieldType;
+    terms: Array<TermCount>;
+    sampled: boolean;
+};
+
+export type GetExploreFacetsData = {
+    body: FacetsQuery;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/explore/{target}/facets';
+};
+
+export type GetExploreFacetsErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetExploreFacetsError = GetExploreFacetsErrors[keyof GetExploreFacetsErrors];
+
+export type GetExploreFacetsResponses = {
+    /**
+     * OK
+     */
+    200: FacetsResult;
+};
+
+export type GetExploreFacetsResponse = GetExploreFacetsResponses[keyof GetExploreFacetsResponses];
 
 export type GetExploreSchemaData = {
     body?: never;
@@ -248,6 +321,49 @@ export type SearchExploreResponses = {
 };
 
 export type SearchExploreResponse = SearchExploreResponses[keyof SearchExploreResponses];
+
+export type GetExploreTermsData = {
+    body?: never;
+    path: {
+        target: string;
+    };
+    query?: {
+        field?: string;
+        prefix?: string;
+        take?: number;
+    };
+    url: '/umbraco/search-manager/api/v1/explore/{target}/terms';
+};
+
+export type GetExploreTermsErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetExploreTermsError = GetExploreTermsErrors[keyof GetExploreTermsErrors];
+
+export type GetExploreTermsResponses = {
+    /**
+     * OK
+     */
+    200: TermsResult;
+};
+
+export type GetExploreTermsResponse = GetExploreTermsResponses[keyof GetExploreTermsResponses];
 
 export type GetExploreTargetsData = {
     body?: never;

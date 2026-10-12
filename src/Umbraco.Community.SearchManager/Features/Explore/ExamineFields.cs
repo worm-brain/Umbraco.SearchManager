@@ -57,22 +57,34 @@ internal static class ExamineFields
             return FieldSchema.Empty;
         }
 
-        List<string> names;
+        // Field names and how many documents have each (Lucene's per-field doc count, -1 when
+        // the codec does not keep it).
+        var fields = new List<IndexField>();
+        long documentCount;
         using (ISearcherReference reference = lucene.GetSearchContext().GetSearcher())
         {
-            names =
-            [
-                .. MultiFields
-                    .GetMergedFieldInfos(reference.IndexSearcher.IndexReader)
-                    .Select(info => info.Name),
-            ];
+            IndexReader reader = reference.IndexSearcher.IndexReader;
+            documentCount = reader.NumDocs;
+            foreach (FieldInfo info in MultiFields.GetMergedFieldInfos(reader))
+            {
+                // Examine's sort copies (__Sort_nodeName) are not something to filter on.
+                if (info.Name.StartsWith("__Sort_", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int count = MultiFields.GetTerms(reader, info.Name)?.DocCount ?? -1;
+                fields.Add(
+                    new IndexField(
+                        info.Name,
+                        TypeOf(ValueTypeOf(info.Name, indexes)),
+                        count < 0 ? null : count
+                    )
+                );
+            }
         }
 
-        // Examine's sort copies (__Sort_nodeName) are not something to filter on.
-        IEnumerable<IndexField> fields = names
-            .Where(name => !name.StartsWith("__Sort_", StringComparison.Ordinal))
-            .Select(name => new IndexField(name, TypeOf(ValueTypeOf(name, indexes))));
-        return new FieldSchema(fields, Aliases);
+        return new FieldSchema(fields, Aliases, documentCount);
     }
 
     /// <summary>
@@ -82,7 +94,7 @@ internal static class ExamineFields
     /// <param name="field">The field name.</param>
     /// <param name="indexes">The indexes behind the searcher.</param>
     /// <returns>The value type, or null when no Lucene index is known.</returns>
-    private static IIndexFieldValueType? ValueTypeOf(
+    public static IIndexFieldValueType? ValueTypeOf(
         string field,
         IReadOnlyList<LuceneIndex> indexes
     )

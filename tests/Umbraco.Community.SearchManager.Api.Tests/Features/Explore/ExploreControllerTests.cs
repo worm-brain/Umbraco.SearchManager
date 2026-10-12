@@ -154,6 +154,74 @@ public class ExploreControllerTests
         );
     }
 
+    [Fact]
+    public async Task GetExploreTerms_TargetWithoutTermStatistics_IsBadRequest()
+    {
+        // Arrange
+        _source
+            .GetTermsAsync(
+                Arg.Any<ExploreTarget>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Throws(new NotSupportedException("not Lucene"));
+
+        // Act
+        IActionResult result = await With(new GetExploreTermsController(_registry, _access))
+            .GetExploreTerms("ExternalIndex", "type", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Status(result));
+    }
+
+    [Fact]
+    public async Task GetExploreTerms_UnknownField_IsNotFound()
+    {
+        // Act
+        IActionResult result = await With(new GetExploreTermsController(_registry, _access))
+            .GetExploreTerms(
+                "ExternalIndex",
+                "colour",
+                null,
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status404NotFound, Status(result));
+    }
+
+    [Fact]
+    public async Task GetExploreFacets_TooManyFields_IsBadRequest()
+    {
+        // Act
+        IActionResult result = await With(new GetExploreFacetsController(_registry, _access))
+            .GetExploreFacets(
+                "ExternalIndex",
+                new FacetsQuery([], null, [.. Enumerable.Range(0, 21).Select(i => $"f{i}")]),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Status(result));
+    }
+
+    [Fact]
+    public async Task GetExploreFacets_MemberIndexWithoutMembersAccess_IsForbidden()
+    {
+        // Act
+        IActionResult result = await With(new GetExploreFacetsController(_registry, _access))
+            .GetExploreFacets(
+                "MembersIndex",
+                new FacetsQuery([], null, ["type"]),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status403Forbidden, Status(result));
+    }
+
     private Task<IActionResult> SearchAsync(string target, ExploreQuery query) =>
         With(new SearchExploreController(_registry, _access))
             .SearchExplore(target, query, TestContext.Current.CancellationToken);

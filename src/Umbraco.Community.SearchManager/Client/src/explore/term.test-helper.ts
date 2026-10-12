@@ -33,6 +33,7 @@ export const schema: ExploreSchema = {
     { type: "Date", operators: ["On", "After", "Before", "Missing"] },
   ],
   cultures: ["da-DK", "en-US"],
+  documentCount: 200,
 };
 
 /** A Lucene index target. */

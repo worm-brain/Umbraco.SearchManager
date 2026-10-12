@@ -22,7 +22,11 @@ public enum FieldType
 /// <summary>One field of an index or searcher.</summary>
 /// <param name="Name">The field name in the index, for example <c>nodeName_en-us</c>.</param>
 /// <param name="Type">How it is indexed.</param>
-public sealed record IndexField(string Name, FieldType Type);
+/// <param name="Documents">
+/// How many documents have a value in the field, for its coverage; null when the source cannot
+/// count. Lucene counts documents deleted but not yet merged away too.
+/// </param>
+public sealed record IndexField(string Name, FieldType Type, long? Documents = null);
 
 /// <summary>A short name the search box accepts for a field, such as <c>type</c> for <c>__NodeTypeAlias</c>.</summary>
 /// <param name="Alias">What the user types, lower case.</param>
@@ -47,8 +51,14 @@ public sealed class FieldSchema
     /// <summary>Creates a schema.</summary>
     /// <param name="fields">The fields; a name listed twice keeps its first entry.</param>
     /// <param name="aliases">Aliases; ones naming a field the schema does not have are dropped.</param>
-    public FieldSchema(IEnumerable<IndexField> fields, IEnumerable<FieldAlias> aliases)
+    /// <param name="documentCount">Documents in the index, or null when unknown.</param>
+    public FieldSchema(
+        IEnumerable<IndexField> fields,
+        IEnumerable<FieldAlias> aliases,
+        long? documentCount = null
+    )
     {
+        DocumentCount = documentCount;
         ArgumentNullException.ThrowIfNull(fields);
         ArgumentNullException.ThrowIfNull(aliases);
 
@@ -70,6 +80,9 @@ public sealed class FieldSchema
 
     /// <summary>A schema with no fields, for sources that cannot list them.</summary>
     public static FieldSchema Empty { get; } = new([], []);
+
+    /// <summary>Documents in the index, or null when unknown.</summary>
+    public long? DocumentCount { get; }
 
     /// <summary>Every field, sorted by name.</summary>
     public IReadOnlyList<IndexField> Fields { get; }

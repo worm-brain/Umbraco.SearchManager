@@ -39,11 +39,13 @@ public sealed record ExploreTarget(
 /// <param name="Aliases">Short names the search box accepts.</param>
 /// <param name="Operators">The operators the source runs per field type.</param>
 /// <param name="Cultures">The site's cultures for the culture picker, ISO codes.</param>
+/// <param name="DocumentCount">Documents in the target, for field coverage; null when unknown.</param>
 public sealed record ExploreSchema(
     IReadOnlyList<IndexField> Fields,
     IReadOnlyList<FieldAlias> Aliases,
     IReadOnlyList<FieldTypeOperators> Operators,
-    IReadOnlyList<string> Cultures
+    IReadOnlyList<string> Cultures,
+    long? DocumentCount
 );
 
 /// <summary>A search request from the Explore view.</summary>
@@ -140,6 +142,41 @@ public interface IExploreSource
     Task<ExploreResult> SearchAsync(
         ExploreTarget target,
         ExploreQuery query,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Reads a field's most common values starting with a prefix, for value suggestions. Only
+    /// for targets with <see cref="ExploreCapabilities.TermStatistics"/>.
+    /// </summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="field">The field (an alias is resolved).</param>
+    /// <param name="prefix">What the user typed after the colon; compared case-insensitively.</param>
+    /// <param name="take">How many values to return.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The values, or null when the target has no such field.</returns>
+    /// <exception cref="NotSupportedException">The target has no term statistics.</exception>
+    Task<TermsResult?> GetTermsAsync(
+        ExploreTarget target,
+        string field,
+        string prefix,
+        int take,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Counts the top values of some fields over the documents the filters match, or over the
+    /// whole index when no filter runs. Only for targets with <see cref="ExploreCapabilities.TermStatistics"/>.
+    /// </summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="query">The filters, culture and fields.</param>
+    /// <param name="cancellationToken">Cancels the count.</param>
+    /// <returns>The counts.</returns>
+    /// <exception cref="NotSupportedException">The target has no term statistics.</exception>
+    /// <exception cref="InvalidNativeQueryException">A raw query filter could not be parsed.</exception>
+    Task<FacetsResult> GetFacetsAsync(
+        ExploreTarget target,
+        FacetsQuery query,
         CancellationToken cancellationToken
     );
 }

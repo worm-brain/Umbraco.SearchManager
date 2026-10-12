@@ -18,3 +18,8 @@ All notable changes to this project are documented here. The format follows
   culture variants. Results show score, id, name (with a link to the editor), document type,
   cultures and updated, plus any field through the column picker, with paging; a drawer shows
   every stored field with filter for and filter out. The whole view is in the URL.
+- Explore suggests fields (with type and coverage) as you type, then the field's most common
+  values with counts (relative ranges for dates); arrow keys, Enter and Escape work the list.
+  A fields panel shows the top values of document type, index type, published and updated, over
+  the whole index or over the results; click a value to filter on it, or its minus to exclude
+  it. "All fields" lists every field with its type and coverage and adds a filter on it.

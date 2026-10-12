@@ -103,7 +103,9 @@ export class SearchManagerChipEditorElement extends UmbLitElement {
 
     return html`
       <div class="form">
-        <strong class="field">${this.localize.term("searchManager_editorTitle", title)}</strong>
+        <strong class="field"
+          >${this.localize.term(this.isNew ? "searchManager_editorNewTitle" : "searchManager_editorTitle", title)}</strong
+        >
         ${
           operators.length > 0
             ? html`
