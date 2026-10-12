@@ -4,6 +4,21 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:44381/' | (string & {});
 };
 
+export type CompiledQuery = {
+    language: string;
+    query: string;
+    parsed: null | string;
+    code: string;
+    fluent: boolean;
+    skipped: Array<SkippedFilter>;
+};
+
+export type CompileRequest = {
+    filters: Array<Filter>;
+    culture?: null | string;
+    native?: null | string;
+};
+
 export type ExploreCapabilities = {
     nativeQuery: boolean;
     termStatistics: boolean;
@@ -28,6 +43,7 @@ export type ExploreQuery = {
     culture?: null | string;
     skip: number;
     take: number;
+    native?: null | string;
 };
 
 export type ExploreResult = {
@@ -135,6 +151,25 @@ export type IndexSummary = {
     };
 };
 
+export type NativeRequest = {
+    query: string;
+};
+
+export type NativeValidation = {
+    valid: boolean;
+    error: null | string;
+    position: null | number;
+    warnings: Array<NativeWarning>;
+};
+
+export type NativeWarning = {
+    code: string;
+    message: string;
+    start: number;
+    length: number;
+    replacement: null | string;
+};
+
 export type ParseFallback = {
     code: string;
     message: string;
@@ -173,6 +208,45 @@ export type TermsResult = {
     terms: Array<TermCount>;
     sampled: boolean;
 };
+
+export type CompileExploreData = {
+    body: CompileRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/explore/{target}/compile';
+};
+
+export type CompileExploreErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type CompileExploreError = CompileExploreErrors[keyof CompileExploreErrors];
+
+export type CompileExploreResponses = {
+    /**
+     * OK
+     */
+    200: CompiledQuery;
+};
+
+export type CompileExploreResponse = CompileExploreResponses[keyof CompileExploreResponses];
 
 export type GetExploreFacetsData = {
     body: FacetsQuery;
@@ -283,6 +357,45 @@ export type ParseExploreInputResponses = {
 
 export type ParseExploreInputResponse = ParseExploreInputResponses[keyof ParseExploreInputResponses];
 
+export type ReadNativeQueryData = {
+    body: NativeRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/explore/{target}/read-native';
+};
+
+export type ReadNativeQueryErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type ReadNativeQueryError = ReadNativeQueryErrors[keyof ReadNativeQueryErrors];
+
+export type ReadNativeQueryResponses = {
+    /**
+     * OK
+     */
+    200: ParseResult;
+};
+
+export type ReadNativeQueryResponse = ReadNativeQueryResponses[keyof ReadNativeQueryResponses];
+
 export type SearchExploreData = {
     body: ExploreQuery;
     path: {
@@ -364,6 +477,45 @@ export type GetExploreTermsResponses = {
 };
 
 export type GetExploreTermsResponse = GetExploreTermsResponses[keyof GetExploreTermsResponses];
+
+export type ValidateNativeQueryData = {
+    body: NativeRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/explore/{target}/validate';
+};
+
+export type ValidateNativeQueryErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type ValidateNativeQueryError = ValidateNativeQueryErrors[keyof ValidateNativeQueryErrors];
+
+export type ValidateNativeQueryResponses = {
+    /**
+     * OK
+     */
+    200: NativeValidation;
+};
+
+export type ValidateNativeQueryResponse = ValidateNativeQueryResponses[keyof ValidateNativeQueryResponses];
 
 export type GetExploreTargetsData = {
     body?: never;

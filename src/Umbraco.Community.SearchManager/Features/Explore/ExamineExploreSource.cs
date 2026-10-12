@@ -123,7 +123,11 @@ internal sealed class ExamineExploreSource(
 
         ISearcher searcher = SearcherOf(target);
         FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
-        LuceneCompilation compilation = Compile(query.Filters, query.Culture, schema, target);
+
+        // Native mode runs the raw query exactly as typed, ranked like any text query.
+        LuceneCompilation compilation = query.Native is null
+            ? Compile(query.Filters, query.Culture, schema, target)
+            : new LuceneCompilation(RequireNative(target, query.Native), [], true);
         IBooleanOperation operation = Parse(searcher, compilation.Query).Operation;
 
         // Without words to rank by every score is equal, so the newest documents come first,
@@ -272,6 +276,150 @@ internal sealed class ExamineExploreSource(
                 facets
             )
         );
+    }
+
+    /// <inheritdoc />
+    public Task<CompiledQuery> CompileAsync(
+        ExploreTarget target,
+        CompileRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(request);
+
+        ISearcher searcher = SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        if (request.Native is not null)
+        {
+            string native = RequireNative(target, request.Native);
+            return Task.FromResult(
+                new CompiledQuery(
+                    LuceneLanguage,
+                    native,
+                    ParsedText(searcher, native),
+                    ExamineCSharp.Native(native),
+                    false,
+                    []
+                )
+            );
+        }
+
+        IReadOnlyList<Core.Explore.Filter> filters = request.Filters ?? [];
+        LuceneCompilation compilation = Compile(filters, request.Culture, schema, target);
+        var skipped = compilation.Skipped.Select(skip => skip.Index).ToHashSet();
+        CSharpQuery csharp = ExamineCSharp.For(
+            [.. filters.Where((_, index) => !skipped.Contains(index))],
+            schema,
+            request.Culture,
+            Today,
+            compilation.Query
+        );
+        return Task.FromResult(
+            new CompiledQuery(
+                LuceneLanguage,
+                compilation.Query,
+                ParsedText(searcher, compilation.Query),
+                csharp.Code,
+                csharp.Fluent,
+                compilation.Skipped
+            )
+        );
+    }
+
+    /// <inheritdoc />
+    public Task<NativeValidation> ValidateNativeAsync(
+        ExploreTarget target,
+        string query,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        string native = RequireNative(target, query);
+        ISearcher searcher = SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        IReadOnlyList<NativeWarning> warnings = NativeQueryLinter.Lint(native, schema);
+
+        try
+        {
+            searcher.CreateQuery().NativeQuery(native);
+            return Task.FromResult(new NativeValidation(true, null, null, warnings));
+        }
+        catch (ParseException exception)
+        {
+            return Task.FromResult(
+                new NativeValidation(
+                    false,
+                    exception.Message,
+                    LuceneErrorPosition.Find(native, exception),
+                    warnings
+                )
+            );
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Core.Explore.Filter>> ReadNativeAsync(
+        ExploreTarget target,
+        string query,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        string native = RequireNative(target, query);
+        ISearcher searcher = SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        return Task.FromResult(LuceneToChips.Read(native, schema));
+    }
+
+    /// <summary>The query language this source compiles to.</summary>
+    private const string LuceneLanguage = "Lucene";
+
+    /// <summary>Today, by the server's clock and time zone, for relative date values.</summary>
+    private DateOnly Today => DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime);
+
+    /// <summary>
+    /// The query as Lucene parsed it (<c>Query.ToString()</c>), without the clause Examine wraps it
+    /// in; null when it does not parse or the searcher is not a Lucene searcher.
+    /// </summary>
+    /// <param name="searcher">The searcher.</param>
+    /// <param name="lucene">The query text.</param>
+    /// <returns>The parsed query's text.</returns>
+    private static string? ParsedText(ISearcher searcher, string lucene)
+    {
+        try
+        {
+            if (Parse(searcher, lucene).Query is not LuceneSearchQueryBase parsed)
+            {
+                return null;
+            }
+
+            Lucene.Net.Search.BooleanQuery outer = parsed.Query;
+            return outer.Clauses.Count == 1 ? outer.Clauses[0].Query.ToString() : outer.ToString();
+        }
+        catch (InvalidNativeQueryException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Refuses raw queries on a target that is not a Lucene searcher.</summary>
+    /// <param name="target">The target.</param>
+    /// <param name="query">The raw query.</param>
+    /// <returns>The query, trimmed; <c>*:*</c> when blank.</returns>
+    /// <exception cref="NotSupportedException">The target takes no raw queries.</exception>
+    private static string RequireNative(ExploreTarget target, string query)
+    {
+        if (!target.Capabilities.NativeQuery)
+        {
+            throw new NotSupportedException(
+                $"{target.Name} is not searched by Lucene, so it takes no raw Lucene queries"
+            );
+        }
+
+        // A blank query in native mode matches everything, as the whole-index view does.
+        string trimmed = (query ?? string.Empty).Trim();
+        return trimmed.Length == 0 ? LuceneQueryCompiler.MatchAll : trimmed;
     }
 
     /// <summary>Compiles filters for a target, resolving relative dates against the server's clock.</summary>

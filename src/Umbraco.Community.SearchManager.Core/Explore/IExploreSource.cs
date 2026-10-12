@@ -53,12 +53,47 @@ public sealed record ExploreSchema(
 /// <param name="Culture">The culture picked, or null for all.</param>
 /// <param name="Skip">Results to skip, for paging.</param>
 /// <param name="Take">Results to return, 1 to 100.</param>
+/// <param name="Native">
+/// A raw query in the engine's language to run as typed (native mode), instead of the filters;
+/// null to run the filters.
+/// </param>
 public sealed record ExploreQuery(
     IReadOnlyList<Filter> Filters,
     string? Culture = null,
     int Skip = 0,
-    int Take = 20
+    int Take = 20,
+    string? Native = null
 );
+
+/// <summary>A request to show the query a search would run.</summary>
+/// <param name="Filters">The chips that run.</param>
+/// <param name="Culture">The culture picked, or null.</param>
+/// <param name="Native">The raw query in native mode, or null.</param>
+public sealed record CompileRequest(
+    IReadOnlyList<Filter> Filters,
+    string? Culture = null,
+    string? Native = null
+);
+
+/// <summary>The query a search runs, three ways, for the show-query panel.</summary>
+/// <param name="Language">The engine's query language, for example <c>Lucene</c>.</param>
+/// <param name="Query">The query sent to the engine.</param>
+/// <param name="Parsed">The query as the engine's parser read it, or null when it does not parse.</param>
+/// <param name="Code">C# that runs the same query with Examine.</param>
+/// <param name="Fluent">Whether <paramref name="Code"/> uses the engine's fluent API.</param>
+/// <param name="Skipped">Filters left out because the engine cannot run them.</param>
+public sealed record CompiledQuery(
+    string Language,
+    string Query,
+    string? Parsed,
+    string Code,
+    bool Fluent,
+    IReadOnlyList<SkippedFilter> Skipped
+);
+
+/// <summary>A raw query in the engine's language, for validation or for turning into chips.</summary>
+/// <param name="Query">The query text.</param>
+public sealed record NativeRequest(string Query);
 
 /// <summary>One document found.</summary>
 /// <param name="Id">The engine's document id (the node id for Umbraco content).</param>
@@ -177,6 +212,44 @@ public interface IExploreSource
     Task<FacetsResult> GetFacetsAsync(
         ExploreTarget target,
         FacetsQuery query,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>Shows the query a search would run: as sent, as parsed, and as C#.</summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="request">The filters, culture, or raw query.</param>
+    /// <param name="cancellationToken">Cancels the compile.</param>
+    /// <returns>The query.</returns>
+    Task<CompiledQuery> CompileAsync(
+        ExploreTarget target,
+        CompileRequest request,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Checks a raw query with the engine's own parser, with the error position, and lints it.
+    /// Only for targets with <see cref="ExploreCapabilities.NativeQuery"/>.
+    /// </summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="query">The raw query.</param>
+    /// <param name="cancellationToken">Cancels the check.</param>
+    /// <returns>The verdict and warnings.</returns>
+    /// <exception cref="NotSupportedException">The target takes no raw queries.</exception>
+    Task<NativeValidation> ValidateNativeAsync(
+        ExploreTarget target,
+        string query,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>Turns a raw query back into chips, leaving what has no chip form as raw.</summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="query">The raw query.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The chips.</returns>
+    /// <exception cref="NotSupportedException">The target takes no raw queries.</exception>
+    Task<IReadOnlyList<Filter>> ReadNativeAsync(
+        ExploreTarget target,
+        string query,
         CancellationToken cancellationToken
     );
 }

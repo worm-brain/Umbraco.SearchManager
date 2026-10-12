@@ -10,8 +10,14 @@ describe("explore view state in the URL", () => {
       columns: ["writerName", "level"],
       doc: "1234",
       page: 3,
+      native: "+level:[3 TO 3]",
+      showQuery: true,
     };
     expect(decodeExploreState(encodeExploreState(state))).toEqual(state);
+  });
+
+  it("keeps an empty native query as native mode", () => {
+    expect(decodeExploreState(encodeExploreState({ ...createExploreState(), native: "" })).native).toBe("");
   });
 
   it("writes nothing for the defaults", () => {

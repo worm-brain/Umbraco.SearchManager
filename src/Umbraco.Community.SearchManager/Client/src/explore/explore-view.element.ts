@@ -25,6 +25,9 @@ import "./document-drawer.element.js";
 import "./fields-panel.element.js";
 import "./results.element.js";
 import "./search-box.element.js";
+import "./native-box.element.js";
+import "./show-query-panel.element.js";
+import { chipsAfterNative, nativeStart } from "./native-mode.js";
 
 /** The target Explore opens on when the URL names none. */
 const DEFAULT_TARGET = "ExternalIndex";
@@ -38,8 +41,13 @@ const DEFAULT_TARGET = "ExternalIndex";
  *   drawn disabled and not sent.
  * - **Results:** `POST /explore/{target}/search` on every change of target, culture, chips or
  *   page; a newer search aborts the one in flight. The drawer shows the open document's fields.
- * - **URL:** the whole view (index, culture, chips, columns, open document, page) is written to
- *   the query string with `replaceState` and read back when the tab opens, so a link reopens it.
+ * - **Native mode:** "Lucene" (offered for Lucene searchers only) moves the last query into a raw
+ *   Lucene box; "Back to filters" turns it into chips again with `POST /read-native`. While it is
+ *   on, searches send the raw query instead of the chips.
+ * - **Show query:** the panel shows the query sent, as parsed, and as C#.
+ * - **URL:** the whole view (index, culture, chips, raw query, columns, open document, page, show
+ *   query) is written to the query string with `replaceState` and read back when the tab opens,
+ *   so a link reopens it.
  *
  * Bound by the `Umbraco.Community.SearchManager.WorkspaceView.Explore` manifest.
  *
@@ -130,14 +138,24 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     this.#search = controller;
 
     const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
+    // Native mode on a target that has it runs the raw query; otherwise the chips that can run.
+    const native = target.capabilities.nativeQuery ? this._state.native : undefined;
     const filters = this._state.filters.filter((filter) => !disabledReason(filter, this._schema, target, term));
     // A new array only when the chips changed, so the fields panel does not count again on paging.
-    if (JSON.stringify(filters) !== JSON.stringify(this._sent)) this._sent = filters;
+    // The fields panel counts over the same query: in native mode, the raw query as one chip.
+    const sent: Array<Filter> =
+      native === undefined
+        ? filters
+        : native.trim()
+          ? [{ kind: "Lucene", field: null, op: "Contains", value: native, exclude: false }]
+          : [];
+    if (JSON.stringify(sent) !== JSON.stringify(this._sent)) this._sent = sent;
     this._loading = true;
     const { data, error, response } = await ExploreService.searchExplore({
       path: { target: target.name },
       body: {
-        filters,
+        filters: native === undefined ? filters : [],
+        native: native ?? null,
         culture: this._state.culture ?? null,
         skip: (this._state.page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
@@ -167,7 +185,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       void this.#loadSchema();
       return;
     }
-    const searchKeys: Array<keyof ExploreViewState> = ["filters", "culture", "page"];
+    const searchKeys: Array<keyof ExploreViewState> = ["filters", "culture", "page", "native"];
     if (searchKeys.some((key) => key in partial)) void this.#runSearch();
   }
 
@@ -178,6 +196,53 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     if (search === window.location.search.replace(/^\?/, "")) return;
     const url = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
     window.history.replaceState(window.history.state, "", url);
+  }
+
+  /**
+   * Opens native mode with the query the last search ran. Chips that could not run were never
+   * part of it, so they are kept to come back when native mode closes.
+   */
+  #enterNative(): void {
+    this.#update({ native: nativeStart(this._result?.query), page: 1, doc: undefined });
+  }
+
+  /** Closes native mode, turning the raw query back into chips. */
+  async #leaveNative(): Promise<void> {
+    const target = this.#target;
+    const native = this._state.native ?? "";
+    if (!target) return;
+    const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
+    const disabled = this._state.filters.filter((filter) => disabledReason(filter, this._schema, target, term));
+    if (!native.trim()) {
+      this.#update({ native: undefined, filters: disabled, page: 1 });
+      return;
+    }
+
+    const { data, error, response } = await ExploreService.readNativeQuery({
+      path: { target: target.name },
+      body: { query: native },
+    });
+    if (!data) {
+      this._error = this.localize.term("searchManager_nativeReadError", describeError(error, response));
+      return;
+    }
+    this.#update({ native: undefined, filters: chipsAfterNative(data.filters, disabled), page: 1, doc: undefined });
+  }
+
+  /**
+   * Adds (or toggles) a chip from the fields panel or the drawer. In native mode the raw query
+   * is turned back into chips first, so the new chip joins them rather than a hidden list.
+   */
+  async #addFilter(event: SearchManagerAddFilterEvent): Promise<void> {
+    if (this._state.native !== undefined && this.#target?.capabilities.nativeQuery) {
+      await this.#leaveNative();
+      if (this._state.native !== undefined) return;
+    }
+    this.#setFilters(
+      event.toggle
+        ? toggleFilter(this._state.filters, event.filter)
+        : appendFilters(this._state.filters, [event.filter]),
+    );
   }
 
   #setFilters(filters: Array<Filter>): void {
@@ -197,34 +262,63 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     }
 
     const target = this.#target;
+    const native = this._state.native !== undefined && (target?.capabilities.nativeQuery ?? false);
     const openHit = this._result?.hits.find((hit) => hit.id === this._state.doc);
     return html`
       <uui-box class="query">
         <div class="pickers">${this.#renderTargetPicker(target)} ${this.#renderCulturePicker()}</div>
-        <search-manager-search-box
-          .target=${target}
-          .schema=${this._schema}
-          .filters=${this._state.filters}
-          @search-manager-filters-change=${(event: SearchManagerFiltersChangeEvent) => this.#setFilters(event.filters)}
-        ></search-manager-search-box>
+        <div class="query-row">
+          ${
+            native
+              ? html`<search-manager-native-box
+                  .target=${target}
+                  .query=${this._state.native ?? ""}
+                  @search-manager-native-run=${(event: CustomEvent<string>) =>
+                    this.#update({ native: event.detail, page: 1, doc: undefined })}
+                ></search-manager-native-box>`
+              : html`<search-manager-search-box
+                  .target=${target}
+                  .schema=${this._schema}
+                  .filters=${this._state.filters}
+                  @search-manager-filters-change=${(event: SearchManagerFiltersChangeEvent) =>
+                    this.#setFilters(event.filters)}
+                ></search-manager-search-box>`
+          }
+          ${this.#renderNativeToggle(target, native)}
+          <uui-button
+            look=${this._state.showQuery ? "primary" : "secondary"}
+            label=${this.localize.term(this._state.showQuery ? "searchManager_hideQuery" : "searchManager_showQuery")}
+            aria-pressed=${this._state.showQuery ? "true" : "false"}
+            @click=${() => this.#update({ showQuery: !this._state.showQuery || undefined })}
+          >
+            <umb-icon name="icon-code"></umb-icon>
+          </uui-button>
+        </div>
         ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : nothing}
+        ${
+          this._state.showQuery && target
+            ? html`<search-manager-show-query-panel
+                .target=${target}
+                .schema=${this._schema}
+                .filters=${native ? [] : this._sent}
+                .notSent=${native ? [] : this.#notSent(target)}
+                .culture=${this._state.culture}
+                .native=${native ? (this._state.native ?? "") : undefined}
+              ></search-manager-show-query-panel>`
+            : nothing
+        }
       </uui-box>
       ${this._loading && !this._result ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
       <div
         class="main"
-        @search-manager-add-filter=${(event: SearchManagerAddFilterEvent) =>
-          this.#setFilters(
-            event.toggle
-              ? toggleFilter(this._state.filters, event.filter)
-              : appendFilters(this._state.filters, [event.filter]),
-          )}
+        @search-manager-add-filter=${(event: SearchManagerAddFilterEvent) => void this.#addFilter(event)}
         @search-manager-open-document=${(event: CustomEvent<string | undefined>) => this.#update({ doc: event.detail })}
       >
         <search-manager-fields-panel
           .target=${target}
           .schema=${this._schema}
           .filters=${this._sent}
-          .allFilters=${this._state.filters}
+          .allFilters=${native ? [] : this._state.filters}
           .culture=${this._state.culture}
         ></search-manager-fields-panel>
         <uui-box class="results">
@@ -252,6 +346,43 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     `;
   }
 
+  /** The chips left out of the query, with why, for the show-query panel. */
+  #notSent(target: ExploreTarget): Array<{ filter: Filter; reason: string }> {
+    const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
+    const fromServer = new Map((this._result?.skipped ?? []).map((skip) => [skip.index, skip.reason]));
+    let sentIndex = 0;
+    return this._state.filters.flatMap((filter) => {
+      const reason = disabledReason(filter, this._schema, target, term);
+      if (reason) return [{ filter, reason }];
+      // The server's skipped list indexes the chips it was sent.
+      const serverReason = fromServer.get(sentIndex++);
+      return serverReason ? [{ filter, reason: serverReason }] : [];
+    });
+  }
+
+  /** "Lucene" / "Back to filters", disabled with the reason on a target without raw queries. */
+  #renderNativeToggle(target: ExploreTarget | undefined, native: boolean) {
+    if (native) {
+      return html`<uui-button
+        look="primary"
+        label=${this.localize.term("searchManager_nativeOff")}
+        @click=${() => void this.#leaveNative()}
+      ></uui-button>`;
+    }
+    const available = target?.capabilities.nativeQuery ?? false;
+    return html`<uui-button
+      look="secondary"
+      label=${this.localize.term("searchManager_nativeOn")}
+      title=${
+        available
+          ? this.localize.term("searchManager_nativeOnLabel")
+          : this.localize.term("searchManager_nativeUnavailable", target?.name ?? "")
+      }
+      ?disabled=${!available}
+      @click=${() => this.#enterNative()}
+    ></uui-button>`;
+  }
+
   #renderTargetPicker(target: ExploreTarget | undefined) {
     const options: Array<UUISelectOption> = (this._targets ?? []).map((candidate) => ({
       name:
@@ -274,6 +405,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
               page: 1,
               doc: undefined,
               columns: [],
+              native: undefined,
             })}
         ></uui-select>
       </div>
@@ -313,6 +445,21 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
 
       .query {
         display: block;
+      }
+
+      .query-row {
+        display: flex;
+        gap: var(--uui-size-space-2);
+        align-items: flex-start;
+      }
+
+      .query-row > :first-child {
+        flex: 1;
+        min-width: 0;
+      }
+
+      search-manager-show-query-panel {
+        margin-top: var(--uui-size-space-4);
       }
 
       .pickers {

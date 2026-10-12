@@ -20,10 +20,17 @@ export interface ExploreViewState {
   doc?: string;
   /** The page, from 1. */
   page: number;
+  /**
+   * The raw Lucene query in native mode; `undefined` is chip mode, and any string, `""`
+   * included, is native mode.
+   */
+  native?: string;
+  /** Whether the show-query panel is open. */
+  showQuery?: boolean;
 }
 
 /** The query-string keys the view owns; other keys in the URL are kept as they are. */
-export const EXPLORE_STATE_KEYS = ["index", "culture", "f", "cols", "doc", "page"] as const;
+export const EXPLORE_STATE_KEYS = ["index", "culture", "f", "cols", "doc", "page", "native", "sq"] as const;
 
 /**
  * An empty view: first target, all cultures, no chips.
@@ -36,7 +43,8 @@ export function createExploreState(): ExploreViewState {
 
 /**
  * Writes the state as query-string parameters, leaving out defaults. Chips are base64url JSON
- * (`f`), columns a comma list (`cols`).
+ * (`f`), columns a comma list (`cols`); `native` is written even when empty, because an empty
+ * native query is still native mode; `sq=1` keeps the show-query panel open.
  *
  * @param state - The state.
  * @returns The parameters, in a stable order.
@@ -49,6 +57,8 @@ export function encodeExploreState(state: ExploreViewState): URLSearchParams {
   if (state.columns.length > 0) params.set("cols", state.columns.join(","));
   if (state.doc) params.set("doc", state.doc);
   if (state.page > 1) params.set("page", String(state.page));
+  if (state.native !== undefined) params.set("native", state.native);
+  if (state.showQuery) params.set("sq", "1");
   return params;
 }
 
@@ -71,6 +81,8 @@ export function decodeExploreState(params: URLSearchParams): ExploreViewState {
       .filter((column) => column.length > 0),
     doc: params.get("doc") || undefined,
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    native: params.get("native") ?? undefined,
+    showQuery: params.get("sq") === "1" ? true : undefined,
   };
 }
 

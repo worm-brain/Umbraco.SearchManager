@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses } from './types.gen';
+import type { CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,6 +19,18 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 export class ExploreService {
+    public static compileExplore<ThrowOnError extends boolean = false>(options: Options<CompileExploreData, ThrowOnError>): RequestResult<CompileExploreResponses, CompileExploreErrors, ThrowOnError> {
+        return (options.client ?? client).post<CompileExploreResponses, CompileExploreErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/compile',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
     public static getExploreFacets<ThrowOnError extends boolean = false>(options: Options<GetExploreFacetsData, ThrowOnError>): RequestResult<GetExploreFacetsResponses, GetExploreFacetsErrors, ThrowOnError> {
         return (options.client ?? client).post<GetExploreFacetsResponses, GetExploreFacetsErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
@@ -51,6 +63,18 @@ export class ExploreService {
         });
     }
     
+    public static readNativeQuery<ThrowOnError extends boolean = false>(options: Options<ReadNativeQueryData, ThrowOnError>): RequestResult<ReadNativeQueryResponses, ReadNativeQueryErrors, ThrowOnError> {
+        return (options.client ?? client).post<ReadNativeQueryResponses, ReadNativeQueryErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/read-native',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
     public static searchExplore<ThrowOnError extends boolean = false>(options: Options<SearchExploreData, ThrowOnError>): RequestResult<SearchExploreResponses, SearchExploreErrors, ThrowOnError> {
         return (options.client ?? client).post<SearchExploreResponses, SearchExploreErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
@@ -68,6 +92,18 @@ export class ExploreService {
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/explore/{target}/terms',
             ...options
+        });
+    }
+    
+    public static validateNativeQuery<ThrowOnError extends boolean = false>(options: Options<ValidateNativeQueryData, ThrowOnError>): RequestResult<ValidateNativeQueryResponses, ValidateNativeQueryErrors, ThrowOnError> {
+        return (options.client ?? client).post<ValidateNativeQueryResponses, ValidateNativeQueryErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/validate',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
     }
     

@@ -222,6 +222,67 @@ public class ExploreControllerTests
         Assert.Equal(StatusCodes.Status403Forbidden, Status(result));
     }
 
+    [Fact]
+    public async Task ValidateNativeQuery_TargetWithoutNativeQueries_IsBadRequest()
+    {
+        // Arrange
+        _source
+            .ValidateNativeAsync(
+                Arg.Any<ExploreTarget>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Throws(new NotSupportedException("not Lucene"));
+
+        // Act
+        IActionResult result = await With(new ValidateNativeQueryController(_registry, _access))
+            .ValidateNativeQuery(
+                "ExternalIndex",
+                new NativeRequest("a"),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Status(result));
+    }
+
+    [Fact]
+    public async Task CompileExplore_MemberIndexWithoutMembersAccess_IsForbidden()
+    {
+        // Act
+        IActionResult result = await With(new CompileExploreController(_registry, _access))
+            .CompileExplore(
+                "MembersIndex",
+                new CompileRequest([]),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status403Forbidden, Status(result));
+    }
+
+    [Fact]
+    public async Task ReadNativeQuery_Query_ReturnsTheSourcesChips()
+    {
+        // Arrange
+        Filter chip = new(FilterKind.Field, "level", FilterOperator.Equals, "3");
+        _source
+            .ReadNativeAsync(Content, "+level:[3 TO 3]", Arg.Any<CancellationToken>())
+            .Returns([chip]);
+
+        // Act
+        IActionResult result = await With(new ReadNativeQueryController(_registry, _access))
+            .ReadNativeQuery(
+                "ExternalIndex",
+                new NativeRequest("+level:[3 TO 3]"),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        var parsed = Assert.IsType<ParseResult>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal([chip], parsed.Filters);
+    }
+
     private Task<IActionResult> SearchAsync(string target, ExploreQuery query) =>
         With(new SearchExploreController(_registry, _access))
             .SearchExplore(target, query, TestContext.Current.CancellationToken);

@@ -23,3 +23,9 @@ All notable changes to this project are documented here. The format follows
   A fields panel shows the top values of document type, index type, published and updated, over
   the whole index or over the results; click a value to filter on it, or its minus to exclude
   it. "All fields" lists every field with its type and coverage and adds a filter on it.
+- Explore shows the generated query: the Lucene sent, the query as Lucene parsed it, and C# with
+  Examine (fluent, or NativeQuery when a filter has no fluent form), each with Copy. "Lucene"
+  edits the query as raw Lucene, checked as you type with the parser's message and the error
+  position; warnings offer one-click fixes for number and date terms without a range, lower-case
+  operators, unknown fields and leading wildcards. "Back to filters" turns the query into chips
+  again. Native mode is only offered for Lucene indexes.
