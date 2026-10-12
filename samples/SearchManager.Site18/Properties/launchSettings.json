@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "SearchManager.Site17": {
+    "SearchManager.Site18": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
