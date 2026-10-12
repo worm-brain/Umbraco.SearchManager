@@ -10,6 +10,7 @@
     <PackageReference Include="Umbraco.Cms.Web.Website" VersionOverride="$(UmbracoDevVersion)" />
     <PackageReference Include="Umbraco.Cms.Api.Management" VersionOverride="$(UmbracoDevVersion)" />
     <PackageReference Include="Umbraco.Cms.Examine.Lucene" VersionOverride="$(UmbracoDevVersion)" />
+    <PackageReference Include="Umbraco.Cms.Persistence.Sqlite" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />

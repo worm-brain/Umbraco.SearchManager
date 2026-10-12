@@ -175,5 +175,90 @@ export default {
     queryCopy: "Copy",
     queryNotSent: (chip: string, reason: string) => `Not sent: ${chip}. ${reason}.`,
     queryError: (message: string) => `Could not show the query: ${message}`,
+    // Engine filter (Umbraco Search adapter).
+    engineFilterLabel: "Engine",
+    engineAll: (count: number) => `All engines (${count})`,
+    engineOption: (engine: string, count: number) => `${engine} (${count})`,
+
+    // Rebuilds: selection, actions and the confirmation.
+    columnSelect: "Select",
+    columnActions: "Actions",
+    selectAll: "Select all rebuildable indexes",
+    selectIndex: (name: string) => `Select ${name}`,
+    selectedCount: (count: number) => `${count} selected`,
+    clearSelection: "Clear selection",
+    rebuildSelected: (count: number) => (count === 1 ? "Rebuild 1 index" : `Rebuild ${count} indexes`),
+    rebuildAll: "Rebuild all",
+    rebuildIndex: (name: string) => `Rebuild ${name}`,
+    rebuildUnavailable: (reason: string) => `Rebuild unavailable: ${reason}`,
+    rebuildBusy: "Already queued or running",
+    rebuildQueuedHealth: "Queued for rebuild",
+    rebuildRunningHealth: (percent: number) => `About ${percent}% (estimate)`,
+    rebuildRefused: (name: string, reason: string) => `${name} was not queued: ${reason}`,
+    rebuildError: (message: string) => `Could not queue the rebuild: ${message}`,
+    confirmTitleOne: (name: string) => `Rebuild ${name}?`,
+    confirmTitleMany: (count: number) => `Rebuild ${count} indexes?`,
+    confirmIntro: "Rebuilds run on the server in the background. You can keep working or leave this page.",
+    confirmClearedFirst: "Cleared first: searches on this index return partial results until it finishes.",
+    confirmZeroDowntime: "No downtime: search keeps using the current copy until the new one is ready, then swaps.",
+    confirmOneAtATime: "Rebuild one at a time (recommended: less load on the site)",
+    confirmButtonOne: "Rebuild index",
+    confirmButtonMany: (count: number) => `Rebuild ${count} indexes`,
+
+    // Rebuilds panel.
+    rebuildsTitle: "Rebuilds",
+    rebuildsOneAtATime: "One at a time. They keep running if you leave this page.",
+    rebuildsAllAtOnce: "All at once. They keep running if you leave this page.",
+    rebuildsClearFinished: "Clear finished",
+    rebuildsCancel: "Cancel",
+    rebuildsProgressLabel: (name: string) => `${name} rebuild progress, estimated`,
+    rebuildsWaiting: (position: number) => (position === 1 ? "Waiting, next in line" : `Waiting, ${position} in line`),
+    rebuildsStarting: "Starting",
+    rebuildsRunning: (written: string, total: string, percent: number) =>
+      `About ${written} of ${total} documents (${percent}%), estimated from the last run`,
+    rebuildsRunningNoEstimate: (written: string) => `${written} documents so far`,
+    rebuildsRunningZeroDowntime: (percent: number | null) =>
+      percent === null
+        ? "Building a fresh copy. Search keeps using the current one."
+        : `Building a fresh copy. Search keeps using the current one. About ${percent}%, estimated`,
+    rebuildsSucceeded: (duration: string, documents: string) => `Done in ${duration}, ${documents} documents`,
+    rebuildsFailed: (duration: string, error: string) => `Failed after ${duration}: ${error}`,
+    rebuildsCancelled: "Cancelled before it started",
+
+    // Rebuild history: the "Last rebuilt" column and the details sidebar.
+    columnLastRebuilt: "Last rebuilt",
+    lastRebuiltNone: "Not recorded",
+    lastRebuiltSucceeded: (duration: string) => `${duration}, succeeded`,
+    lastRebuiltFailed: (duration: string) => `Failed after ${duration}`,
+    detailsOpen: (name: string) => `Details and history for ${name}`,
+    detailsHistoryTitle: "Rebuild history",
+    detailsHistoryHint: "Kept in the database, last 20 runs",
+    detailsNoRuns: "No rebuilds recorded yet.",
+    detailsLoadError: (message: string) => `Could not load the history: ${message}`,
+    detailsPropertiesTitle: "Index properties",
+    detailsNoProperties: "This index reports no properties.",
+    historyTriggerUser: (name: string) => `${name}, from Search Manager`,
+    historyTriggerOther: "Started outside Search Manager",
+    historySucceeded: "Succeeded",
+    historyFailed: "Failed",
+    historyDetail: (duration: string, before: string, after: string, server: string) =>
+      `${duration}, documents ${before} to ${after}, on ${server}`,
+    // The Search Manager box on Umbraco Search's index page.
+    boxRecentRuns: "Earlier runs",
+    boxExplore: "Explore",
+    boxFieldStatistics: "Field statistics",
+    boxHistory: "History",
+
+    // Server: which server the user is on, and the load-balancing warning.
+    serverLine: (machine: string, role: string) => `Server ${machine} (${role})`,
+    serverRoleSingle: "single server",
+    serverRoleSchedulingPublisher: "scheduling publisher",
+    serverRoleSubscriber: "subscriber",
+    serverRoleUnknown: "role unknown",
+    loadBalancedBanner: (machine: string, count: number) =>
+      `This site runs on ${count} servers. Rebuilding a core Examine index only rebuilds it on this server (${machine}); the other servers keep their own copy. Umbraco Search indexes rebuild on every server.`,
+    confirmThisServerOnly: (machine: string) =>
+      `This site runs on more than one server. Core Examine indexes are rebuilt on this server (${machine}) only; Umbraco Search indexes rebuild on every server.`,
+    historyDetailNoCounts: (duration: string, server: string) => `${duration}, on ${server}`,
   },
 } satisfies UmbLocalizationDictionary;

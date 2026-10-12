@@ -30,6 +30,34 @@ public class IndexSourceRegistryTests
     }
 
     [Fact]
+    public void GetSource_KnownEngine_ReturnsThatSource()
+    {
+        // Arrange
+        var examine = new StubSource("examine", claims: [], names: []);
+        var search = new StubSource("umbraco-search", claims: [], names: []);
+        var registry = new IndexSourceRegistry([examine, search]);
+
+        // Act
+        IIndexSource? source = registry.GetSource("umbraco-search");
+
+        // Assert
+        Assert.Same(search, source);
+    }
+
+    [Fact]
+    public void GetSource_UnknownEngine_ReturnsNull()
+    {
+        // Arrange
+        var registry = new IndexSourceRegistry([new StubSource("examine", [], [])]);
+
+        // Act
+        IIndexSource? source = registry.GetSource("elastic");
+
+        // Assert
+        Assert.Null(source);
+    }
+
+    [Fact]
     public async Task GetIndexesAsync_NoSources_ReturnsEmptyList()
     {
         // Arrange
@@ -60,6 +88,12 @@ public class IndexSourceRegistryTests
                     .Where(name => !claimedElsewhere.Contains(name))
                     .Select(name => IndexSummaries.Healthy(name, engine)),
             ]);
+
+        public Task RebuildAsync(
+            string indexName,
+            IProgress<long> documentsWritten,
+            CancellationToken cancellationToken
+        ) => Task.CompletedTask;
     }
 }
 

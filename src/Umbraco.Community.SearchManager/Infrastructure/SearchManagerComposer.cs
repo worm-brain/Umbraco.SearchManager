@@ -4,8 +4,12 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Community.SearchManager.Core.Explore;
 using Umbraco.Community.SearchManager.Core.Indexes;
+using Umbraco.Community.SearchManager.Core.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Explore;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds;
+using Umbraco.Community.SearchManager.Features.Rebuilds.Events;
+using Umbraco.Community.SearchManager.Features.Rebuilds.History;
 
 namespace Umbraco.Community.SearchManager.Infrastructure;
 
@@ -30,5 +34,17 @@ public sealed class SearchManagerComposer : IComposer
         builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<IExploreSourceRegistry, ExploreSourceRegistry>();
         builder.Services.AddSingleton<IExploreSource, ExamineExploreSource>();
+
+        // Rebuild queue: in-memory status, drained by a hosted service on this server.
+        builder.Services.AddSingleton<IRebuildQueue, RebuildQueue>();
+        builder.Services.AddSingleton<RebuildRunner>();
+        builder.Services.AddHostedService<RebuildWorker>();
+
+        // Live status: queue changes become server events for users the authorizer admits.
+        builder.Services.AddHostedService<RebuildEventBroadcaster>();
+        builder.EventSourceAuthorizers().Append<RebuildEventAuthorizer>();
+
+        // Rebuild history: a package migration creates the table; the repository reads and prunes it.
+        builder.Services.AddSingleton<IRebuildHistory, RebuildHistoryRepository>();
     }
 }

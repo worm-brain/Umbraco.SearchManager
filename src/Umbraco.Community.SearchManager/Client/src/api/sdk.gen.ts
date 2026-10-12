@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
+import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -121,6 +121,70 @@ export class IndexesService {
         return (options?.client ?? client).get<GetIndexesResponses, GetIndexesErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/indexes',
+            ...options
+        });
+    }
+}
+
+export class RebuildsService {
+    public static getRebuilds<ThrowOnError extends boolean = false>(options?: Options<GetRebuildsData, ThrowOnError>): RequestResult<GetRebuildsResponses, GetRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetRebuildsResponses, GetRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds',
+            ...options
+        });
+    }
+    
+    public static queueRebuilds<ThrowOnError extends boolean = false>(options?: Options<QueueRebuildsData, ThrowOnError>): RequestResult<QueueRebuildsResponses, QueueRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).post<QueueRebuildsResponses, QueueRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
+            }
+        });
+    }
+    
+    public static cancelRebuild<ThrowOnError extends boolean = false>(options: Options<CancelRebuildData, ThrowOnError>): RequestResult<CancelRebuildResponses, CancelRebuildErrors, ThrowOnError> {
+        return (options.client ?? client).post<CancelRebuildResponses, CancelRebuildErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/{id}/cancel',
+            ...options
+        });
+    }
+    
+    public static clearFinishedRebuilds<ThrowOnError extends boolean = false>(options?: Options<ClearFinishedRebuildsData, ThrowOnError>): RequestResult<ClearFinishedRebuildsResponses, ClearFinishedRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).delete<ClearFinishedRebuildsResponses, ClearFinishedRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/finished',
+            ...options
+        });
+    }
+    
+    public static getRebuildHistory<ThrowOnError extends boolean = false>(options?: Options<GetRebuildHistoryData, ThrowOnError>): RequestResult<GetRebuildHistoryResponses, GetRebuildHistoryErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetRebuildHistoryResponses, GetRebuildHistoryErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/history',
+            ...options
+        });
+    }
+    
+    public static getLatestRebuilds<ThrowOnError extends boolean = false>(options?: Options<GetLatestRebuildsData, ThrowOnError>): RequestResult<GetLatestRebuildsResponses, GetLatestRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetLatestRebuildsResponses, GetLatestRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/history/latest',
+            ...options
+        });
+    }
+}
+
+export class ServerService {
+    public static getServer<ThrowOnError extends boolean = false>(options?: Options<GetServerData, ThrowOnError>): RequestResult<GetServerResponses, GetServerErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetServerResponses, GetServerErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/server',
             ...options
         });
     }
