@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Infrastructure.Examine;
+using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Features.Indexes;
@@ -15,6 +16,7 @@ public class ExamineIndexSourceTests
     private readonly IExamineManager _examineManager = Substitute.For<IExamineManager>();
     private readonly IIndexDiagnosticsFactory _diagnosticsFactory =
         Substitute.For<IIndexDiagnosticsFactory>();
+    private readonly IIndexRebuilder _indexRebuilder = Substitute.For<IIndexRebuilder>();
     private readonly IIndexingRebuilderService _rebuilder =
         Substitute.For<IIndexingRebuilderService>();
 
@@ -167,14 +169,115 @@ public class ExamineIndexSourceTests
         Assert.Equal(["ExternalIndex"], indexes.Select(index => index.Name));
     }
 
-    private async Task<IReadOnlyList<IndexSummary>> ListAsync(params string[] claimed)
+    [Fact]
+    public async Task RebuildAsync_UmbracoRebuildsTheIndex_Completes()
     {
-        var source = new ExamineIndexSource(
+        // Arrange
+        AddIndex("ExternalIndex", documents: 10, fields: []);
+        _indexRebuilder
+            .RebuildIndexAsync("ExternalIndex", Arg.Any<TimeSpan?>(), false)
+            .Returns(Attempt.Succeed(IndexRebuildResult.Success));
+
+        // Act
+        Task rebuild = RebuildAsync("ExternalIndex");
+        await rebuild;
+
+        // Assert
+        Assert.True(rebuild.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_UmbracoAlreadyRebuilding_ThrowsWithReason()
+    {
+        // Arrange
+        AddIndex("ExternalIndex", documents: 10, fields: []);
+        _rebuilder.IsRebuildingAsync("ExternalIndex").Returns(true);
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("ExternalIndex")
+        );
+
+        // Assert
+        Assert.Contains("already rebuilding", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_RebuilderRefuses_ThrowsWithReason()
+    {
+        // Arrange
+        AddIndex("ExternalIndex", documents: 10, fields: []);
+        _indexRebuilder
+            .RebuildIndexAsync("ExternalIndex", Arg.Any<TimeSpan?>(), false)
+            .Returns(Attempt.Fail(IndexRebuildResult.NotAllowedToRun));
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("ExternalIndex")
+        );
+
+        // Assert
+        Assert.Contains("not allowed", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_IndexingErrorDuringRebuild_ThrowsWithTheError()
+    {
+        // Arrange
+        IIndex index = AddIndex("ProductIndex", documents: 10, fields: []);
+        _indexRebuilder
+            .RebuildIndexAsync("ProductIndex", Arg.Any<TimeSpan?>(), false)
+            .Returns(_ =>
+            {
+                index.IndexingError += Raise.EventWith(
+                    new IndexingErrorEventArgs(index, "Value cannot be null", "1234", null)
+                );
+                return Attempt.Succeed(IndexRebuildResult.Success);
+            });
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("ProductIndex")
+        );
+
+        // Assert
+        Assert.Equal("Value cannot be null", exception.Message);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_NoPopulator_Throws()
+    {
+        // Arrange
+        AddIndex("DeliveryApiContentIndex", documents: 0, fields: []);
+        _rebuilder.CanRebuild("DeliveryApiContentIndex").Returns(false);
+
+        // Act
+        Task rebuild = RebuildAsync("DeliveryApiContentIndex");
+
+        // Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rebuild);
+    }
+
+    private ExamineIndexSource CreateSource() =>
+        new(
             _examineManager,
             _diagnosticsFactory,
             _rebuilder,
+            _indexRebuilder,
+            TimeProvider.System,
             NullLogger<ExamineIndexSource>.Instance
         );
+
+    private Task RebuildAsync(string name) =>
+        CreateSource()
+            .RebuildAsync(name, new Progress<long>(), TestContext.Current.CancellationToken);
+
+    private async Task<IReadOnlyList<IndexSummary>> ListAsync(params string[] claimed)
+    {
+        ExamineIndexSource source = CreateSource();
         return await source.GetIndexesAsync(
             new HashSet<string>(claimed),
             TestContext.Current.CancellationToken
@@ -200,6 +303,13 @@ public class ExamineIndexSourceTests
         );
         _diagnosticsFactory.Create(index).Returns(diagnostics);
         _rebuilder.CanRebuild(index.Name).Returns(true);
+        _examineManager
+            .TryGetIndex(index.Name, out Arg.Any<IIndex>()!)
+            .Returns(call =>
+            {
+                call[1] = index;
+                return true;
+            });
 
         IIndex[] existing = [.. _examineManager.Indexes ?? []];
         _examineManager.Indexes.Returns([.. existing, index]);

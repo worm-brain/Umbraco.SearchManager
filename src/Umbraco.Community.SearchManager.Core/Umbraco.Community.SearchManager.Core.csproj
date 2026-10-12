@@ -11,6 +11,7 @@
     <Version>$(UmbracoMajor).0.0-dev</Version>
     <Description>Contracts and shared logic for Umbraco Search Manager. Reference this to add a search source.</Description>
     <PackageTags>umbraco;search;examine;lucene</PackageTags>
+    <NuGetReadmeSource>README.Core.md</NuGetReadmeSource>
   </PropertyGroup>
 
   <ItemGroup>

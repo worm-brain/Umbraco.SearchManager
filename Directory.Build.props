@@ -51,6 +51,8 @@
     <!-- House-style package icon; the 128 px PNG is what NuGet and the marketplace show. -->
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- Which file in assets/nuget/ is packed as the readme; the Core and adapter projects override it. -->
+    <NuGetReadmeSource Condition="'$(NuGetReadmeSource)' == ''">README.md</NuGetReadmeSource>
   </PropertyGroup>
 
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('$([System.IO.Path]::DirectorySeparatorChar)src$([System.IO.Path]::DirectorySeparatorChar)'))">
@@ -61,12 +63,12 @@
       Visible="false"
     />
     <!--
-      NuGet gets its own short readme: nuget.org renders no relative links, images or
+      Each package gets its own short readme: nuget.org renders no relative links, images or
       raw HTML, and a published readme cannot be changed, so the screenshot-heavy root README stays
       on GitHub and this one links to it.
     -->
     <None
-      Include="$(MSBuildThisFileDirectory)assets\nuget\README.md"
+      Include="$(MSBuildThisFileDirectory)assets\nuget\$(NuGetReadmeSource)"
       Pack="true"
       PackagePath="README.md"
       Visible="false"

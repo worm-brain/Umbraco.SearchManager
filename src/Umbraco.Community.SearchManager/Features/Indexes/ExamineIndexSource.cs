@@ -3,8 +3,10 @@ using Examine.Lucene.Providers;
 using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core;
 using Umbraco.Cms.Infrastructure.Examine;
+using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds;
 
 namespace Umbraco.Community.SearchManager.Features.Indexes;
 
@@ -18,11 +20,19 @@ namespace Umbraco.Community.SearchManager.Features.Indexes;
 /// while reading diagnostics means the index is corrupt, then <see cref="IIndexDiagnostics.IsHealthy"/>.
 /// Indexes that are not Lucene indexes (ExamineX and other providers) get Umbraco's generic
 /// diagnostics, which cannot count; their counts are reported as unknown rather than -1.
+/// <para>
+/// Rebuilds go through Umbraco's <see cref="IIndexRebuilder"/> in the foreground (so Umbraco's own
+/// "is rebuilding" state and its concurrency guard still apply), with a Lucene index switched to
+/// synchronous processing for the duration: every batch is then committed before the populators
+/// move on, so when the rebuilder returns the index is committed and searchable (ADR 0011).
+/// </para>
 /// </remarks>
 internal sealed class ExamineIndexSource(
     IExamineManager examineManager,
     IIndexDiagnosticsFactory diagnosticsFactory,
     IIndexingRebuilderService rebuilderService,
+    IIndexRebuilder indexRebuilder,
+    TimeProvider timeProvider,
     ILogger<ExamineIndexSource> logger
 ) : IIndexSource
 {
@@ -30,7 +40,7 @@ internal sealed class ExamineIndexSource(
     public const string EngineId = "examine";
 
     /// <summary>Descriptions of the indexes Umbraco itself registers.</summary>
-    private static readonly Dictionary<string, string> KnownDescriptions = new(
+    internal static readonly Dictionary<string, string> KnownDescriptions = new(
         StringComparer.OrdinalIgnoreCase
     )
     {
@@ -66,6 +76,98 @@ internal sealed class ExamineIndexSource(
         }
 
         return result;
+    }
+
+    /// <inheritdoc />
+    public async Task RebuildAsync(
+        string indexName,
+        IProgress<long> documentsWritten,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!examineManager.TryGetIndex(indexName, out IIndex? index))
+        {
+            throw new InvalidOperationException($"There is no Examine index called {indexName}.");
+        }
+
+        if (!CanRebuild(indexName))
+        {
+            throw new InvalidOperationException(
+                "No populator is registered for this index, so Umbraco cannot rebuild it."
+            );
+        }
+
+        if (await rebuilderService.IsRebuildingAsync(indexName))
+        {
+            throw new InvalidOperationException(
+                "Umbraco is already rebuilding this index (started from somewhere else)."
+            );
+        }
+
+        // Lucene reports write failures through IndexingError rather than by throwing; the first
+        // one fails the run.
+        string? indexingError = null;
+        void OnIndexingError(object? sender, IndexingErrorEventArgs args) =>
+            indexingError ??= args.Exception?.Message ?? args.Message;
+
+        using var stopPolling = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Task polling = DocumentCountPoller.StartAsync(
+            () => ReadDocumentCount(index),
+            documentsWritten,
+            timeProvider,
+            stopPolling.Token
+        );
+
+        index.IndexingError += OnIndexingError;
+        try
+        {
+            // Synchronous processing commits each batch as it is written, so the rebuilder only
+            // returns once Lucene has committed everything (Examine's default is to queue writes
+            // and commit on a timer, which lets "is rebuilding" clear before the writes land).
+            using ((index as LuceneIndex)?.WithThreadingMode(IndexThreadingMode.Synchronous))
+            {
+                Attempt<IndexRebuildResult> attempt = await indexRebuilder.RebuildIndexAsync(
+                    indexName,
+                    TimeSpan.Zero,
+                    useBackgroundThread: false
+                );
+                if (!attempt.Success)
+                {
+                    throw new InvalidOperationException(
+                        attempt.Result switch
+                        {
+                            IndexRebuildResult.AlreadyRebuilding =>
+                                "Umbraco is already rebuilding this index (started from somewhere else).",
+                            IndexRebuildResult.NotAllowedToRun =>
+                                "Umbraco is not allowed to rebuild indexes on this server right now (it is not the main domain, or not fully started).",
+                            _ => "Umbraco did not rebuild the index. Check the log.",
+                        }
+                    );
+                }
+            }
+
+            (index as LuceneIndex)?.WaitForChanges();
+        }
+        finally
+        {
+            index.IndexingError -= OnIndexingError;
+            await stopPolling.CancelAsync();
+            await polling;
+        }
+
+        if (indexingError is not null)
+        {
+            throw new InvalidOperationException(indexingError);
+        }
+    }
+
+    /// <summary>Reads an index's document count for progress, or null when it cannot count.</summary>
+    /// <param name="index">The index.</param>
+    /// <returns>The count, or null.</returns>
+    private long? ReadDocumentCount(IIndex index)
+    {
+        long count = diagnosticsFactory.Create(index).GetDocumentCount();
+        return count < 0 ? null : count;
     }
 
     /// <summary>Builds the summary for one index. Never throws for a broken index.</summary>

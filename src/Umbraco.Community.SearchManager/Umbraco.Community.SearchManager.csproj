@@ -11,7 +11,7 @@
     <PackageId>Umbraco.Community.SearchManager</PackageId>
     <Product>Umbraco.Community.SearchManager</Product>
     <Title>Umbraco Search Manager</Title>
-    <Description>A search index manager for the Umbraco backoffice and a drop-in replacement for the Examine Management dashboard: bulk rebuilds, live status, rebuild history and click-to-filter search.</Description>
+    <Description>A search index manager for the Umbraco backoffice and a drop-in replacement for the Examine Management dashboard.</Description>
     <PackageTags>umbraco;umbraco-marketplace;search;examine;lucene;indexes</PackageTags>
     <!--
       One package version line per Umbraco major: 17.x.y for Umbraco 17, 18.x.y for 18. Releases set

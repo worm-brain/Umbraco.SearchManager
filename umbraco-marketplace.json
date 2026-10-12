@@ -1,0 +1,57 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "Umbraco Search Manager",
+  "Description": "A search index manager for the Umbraco backoffice and a drop-in replacement for the Examine Management dashboard. Install the package and it takes the dashboard's place under Settings, with every index on one page and no configuration. Rebuild several indexes at once in a queue that keeps running when you leave the page, see who rebuilt what and when, and search any index with click-to-filter chips instead of hand-written Lucene.",
+  "Category": "Search",
+  "AlternateCategory": "Developer Tools",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "Tags": [
+    "search",
+    "examine",
+    "lucene",
+    "indexes",
+    "umbraco search",
+    "backoffice"
+  ],
+  "DocumentationUrl": "https://github.com/worm-brain/Umbraco.SearchManager/blob/main/docs/index.md",
+  "IssueTrackerUrl": "https://github.com/worm-brain/Umbraco.SearchManager/issues",
+  "AuthorDetails": {
+    "Name": "Jack Stunell",
+    "SyncContributorsFromRepository": true
+  },
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/indexes.png",
+      "Caption": "The Indexes view: core Examine and Umbraco Search indexes with their health, documents, fields, size and last rebuild."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/rebuild-confirm.png",
+      "Caption": "Bulk rebuilds: the confirmation says what happens to live search for each index."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/rebuilds.png",
+      "Caption": "The Rebuilds panel follows each run from the server's queue, and keeps going if you leave."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/explore.png",
+      "Caption": "Explore: words and field filters become chips, with a fields panel of top values."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/document-drawer.png",
+      "Caption": "The document drawer: every stored field of a result, with filter for and filter out."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/native-mode.png",
+      "Caption": "Raw Lucene mode, checked as you type, with one-click fixes for common mistakes."
+    }
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Community.SearchManager.UmbracoSearch",
+      "Description": "Adds Umbraco Search indexes to Search Manager. Install it on sites that use Umbraco Search."
+    }
+  ]
+}
