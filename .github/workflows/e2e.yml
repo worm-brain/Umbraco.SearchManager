@@ -69,6 +69,7 @@ jobs:
       # e2e/prepare.ts builds the client and the sites for this major before Playwright starts them.
       - run: bun run e2e
 
+      # The sites' own logs say what the server was doing when a test failed.
       - name: Upload the Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
@@ -77,4 +78,5 @@ jobs:
           path: |
             src/Umbraco.Community.SearchManager/Client/e2e/playwright-report/
             src/Umbraco.Community.SearchManager/Client/e2e/test-results/
+            samples/*/umbraco/Logs/
           if-no-files-found: ignore
