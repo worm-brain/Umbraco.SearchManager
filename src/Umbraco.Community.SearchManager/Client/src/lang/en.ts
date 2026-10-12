@@ -108,6 +108,16 @@ export default {
     historyFailed: "Failed",
     historyDetail: (duration: string, before: string, after: string, server: string) =>
       `${duration}, documents ${before} to ${after}, on ${server}`,
+    // Server: which server the user is on, and the load-balancing warning.
+    serverLine: (machine: string, role: string) => `Server ${machine} (${role})`,
+    serverRoleSingle: "single server",
+    serverRoleSchedulingPublisher: "scheduling publisher",
+    serverRoleSubscriber: "subscriber",
+    serverRoleUnknown: "role unknown",
+    loadBalancedBanner: (machine: string, count: number) =>
+      `This site runs on ${count} servers. Rebuilding a core Examine index only rebuilds it on this server (${machine}); the other servers keep their own copy. Umbraco Search indexes rebuild on every server.`,
+    confirmThisServerOnly: (machine: string) =>
+      `This site runs on more than one server. Core Examine indexes are rebuilt on this server (${machine}) only; Umbraco Search indexes rebuild on every server.`,
     historyDetailNoCounts: (duration: string, server: string) => `${duration}, on ${server}`,
   },
 } satisfies UmbLocalizationDictionary;

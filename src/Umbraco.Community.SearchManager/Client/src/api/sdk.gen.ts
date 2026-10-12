@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses } from './types.gen';
+import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -77,6 +77,16 @@ export class RebuildsService {
         return (options?.client ?? client).get<GetLatestRebuildsResponses, GetLatestRebuildsErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/rebuilds/history/latest',
+            ...options
+        });
+    }
+}
+
+export class ServerService {
+    public static getServer<ThrowOnError extends boolean = false>(options?: Options<GetServerData, ThrowOnError>): RequestResult<GetServerResponses, GetServerErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetServerResponses, GetServerErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/server',
             ...options
         });
     }

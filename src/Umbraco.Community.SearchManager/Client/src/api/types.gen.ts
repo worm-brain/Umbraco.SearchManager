@@ -96,6 +96,15 @@ export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Can
 
 export type RebuildTrigger = 'User' | 'Other';
 
+export type ServerInfo = {
+    machineName: string;
+    role: ServerRoleModel;
+    activeServers: number;
+    isLoadBalanced: boolean;
+};
+
+export type ServerRoleModel = 'Unknown' | 'Single' | 'Subscriber' | 'SchedulingPublisher';
+
 export type GetIndexesData = {
     body?: never;
     path?: never;
@@ -294,3 +303,30 @@ export type GetLatestRebuildsResponses = {
 };
 
 export type GetLatestRebuildsResponse = GetLatestRebuildsResponses[keyof GetLatestRebuildsResponses];
+
+export type GetServerData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/server';
+};
+
+export type GetServerErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetServerResponses = {
+    /**
+     * OK
+     */
+    200: ServerInfo;
+};
+
+export type GetServerResponse = GetServerResponses[keyof GetServerResponses];

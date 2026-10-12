@@ -1,4 +1,4 @@
-import { css, customElement, html } from "@umbraco-cms/backoffice/external/lit";
+import { css, customElement, html, nothing } from "@umbraco-cms/backoffice/external/lit";
 import { UmbModalBaseElement } from "@umbraco-cms/backoffice/modal";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import type { RebuildConfirmModalData, RebuildConfirmModalValue } from "./rebuild-confirm-modal.token.js";
@@ -25,6 +25,9 @@ export class SearchManagerRebuildConfirmModalElement extends UmbModalBaseElement
    */
   override render() {
     const indexes = this.data?.indexes ?? [];
+    // On a load-balanced site, core Examine rebuilds reach only this server (Umbraco-CMS#8060).
+    const server = this.data?.loadBalancedServer;
+    const thisServerOnly = !!server && indexes.some((index) => index.engine === "examine");
     const sequential = (this.value?.mode ?? "OneAtATime") === "OneAtATime";
     const headline =
       indexes.length === 1
@@ -48,6 +51,14 @@ export class SearchManagerRebuildConfirmModalElement extends UmbModalBaseElement
             `,
           )}
         </ul>
+        ${
+          thisServerOnly
+            ? html`<p class="server" role="note">
+                <umb-icon name="icon-alert"></umb-icon>
+                ${this.localize.term("searchManager_confirmThisServerOnly", server!)}
+              </p>`
+            : nothing
+        }
         <uui-checkbox
           label=${this.localize.term("searchManager_confirmOneAtATime")}
           ?checked=${sequential}
@@ -100,6 +111,16 @@ export class SearchManagerRebuildConfirmModalElement extends UmbModalBaseElement
         gap: var(--uui-size-space-1);
         padding: var(--uui-size-space-3) 0;
         border-top: 1px solid var(--uui-color-divider);
+      }
+
+      .server {
+        display: flex;
+        gap: var(--uui-size-space-3);
+        align-items: flex-start;
+        color: var(--uui-color-warning-contrast);
+        background: var(--uui-color-warning);
+        padding: var(--uui-size-space-4);
+        border-radius: var(--uui-border-radius);
       }
 
       .cleared {

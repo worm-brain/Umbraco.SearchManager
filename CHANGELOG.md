@@ -32,3 +32,6 @@ All notable changes to this project are documented here. The format follows
   as runs are queued, start, progress and finish, and only poll while the event connection is
   down. Only users with Settings access receive the events (and Members access as well for
   member indexes).
+- The Indexes view shows which server you are on. On a load-balanced site, a banner and a line in
+  the rebuild confirmation say that core Examine rebuilds only affect this server, while Umbraco
+  Search indexes rebuild on every server.

@@ -4,8 +4,8 @@ import { UMB_MANAGEMENT_API_SERVER_EVENT_CONTEXT } from "@umbraco-cms/backoffice
 import { umbOpenModal } from "@umbraco-cms/backoffice/modal";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
-import { IndexesService, RebuildsService } from "../api/sdk.gen.js";
-import type { IndexSummary, RebuildHistoryEntry, RebuildRun } from "../api/types.gen.js";
+import { IndexesService, RebuildsService, ServerService } from "../api/sdk.gen.js";
+import type { IndexSummary, RebuildHistoryEntry, RebuildRun, ServerInfo } from "../api/types.gen.js";
 import { SEARCH_MANAGER_INDEX_DETAILS_MODAL } from "../details/index-details-modal.token.js";
 import { agoParts, latestEntryByIndex } from "../rebuilds/history-model.js";
 import { SEARCH_MANAGER_REBUILD_CONFIRM_MODAL } from "../rebuilds/rebuild-confirm-modal.token.js";
@@ -41,6 +41,9 @@ import { engineLabel, formatBytes, formatCount, healthLook } from "./index-forma
  * The index list reloads when a run finishes so counts are fresh. Rows keep the server's order,
  * so an update never moves a row.
  *
+ * Server: the toolbar names the server the user is on (`GET /server`); on a load-balanced site a
+ * banner, and a line in the confirmation, say core Examine rebuilds only affect this server.
+ *
  * History: "Last rebuilt" comes from `GET /rebuilds/history/latest` (reloaded with the indexes);
  * the name and the details button open the details sidebar (history and provider properties).
  *
@@ -73,6 +76,10 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   /** Each index's latest recorded rebuild, keyed by index. */
   @state()
   private _latest = new Map<string, RebuildHistoryEntry>();
+
+  /** The server the user is on; undefined until loaded or when it cannot be read. */
+  @state()
+  private _server?: ServerInfo;
 
   /** Names of the selected indexes. */
   @state()
@@ -110,6 +117,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     super.connectedCallback();
     void this.#load();
     void this.#poller.refresh();
+    void ServerService.getServer().then(({ data }) => (this._server = data));
   }
 
   /** Stops polling when the view leaves the page (the runs carry on on the server). */
@@ -163,7 +171,14 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     let mode: "OneAtATime" | "AllAtOnce";
     try {
       ({ mode } = await umbOpenModal(this, SEARCH_MANAGER_REBUILD_CONFIRM_MODAL, {
-        data: { indexes: indexes.map((index) => ({ name: index.name, zeroDowntime: index.zeroDowntime })) },
+        data: {
+          indexes: indexes.map((index) => ({
+            name: index.name,
+            zeroDowntime: index.zeroDowntime,
+            engine: index.engine,
+          })),
+          loadBalancedServer: this._server?.isLoadBalanced ? this._server.machineName : undefined,
+        },
       }));
     } catch {
       return; // Cancelled.
@@ -222,6 +237,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     const selected = rebuildable.filter((index) => this._selected.has(index.name)).map((index) => index.name);
 
     return html`
+      ${this.#renderLoadBalancedBanner()}
       ${
         this._runs.length > 0
           ? html`<search-manager-rebuilds-panel
@@ -236,6 +252,17 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
           <span>${this.localize.term("searchManager_indexesCount", this._indexes.length)}</span>
           ${this.#renderEngineFilter()}
           <span class="spacer"></span>
+          ${
+            this._server
+              ? html`<span class="sub server">
+                  ${this.localize.term(
+                    "searchManager_serverLine",
+                    this._server.machineName,
+                    this.localize.term(`searchManager_serverRole${this._server.role}`),
+                  )}
+                </span>`
+              : nothing
+          }
           <uui-button
             look="outline"
             label=${this.localize.term("searchManager_rebuildAll")}
@@ -493,6 +520,27 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   }
 
   /**
+   * Renders the load-balancing banner, on a site with more than one server.
+   *
+   * @returns The template, or nothing.
+   */
+  #renderLoadBalancedBanner() {
+    if (!this._server?.isLoadBalanced) return nothing;
+    return html`
+      <div class="banner" role="note">
+        <umb-icon name="icon-alert"></umb-icon>
+        <span>
+          ${this.localize.term(
+            "searchManager_loadBalancedBanner",
+            this._server.machineName,
+            this._server.activeServers,
+          )}
+        </span>
+      </div>
+    `;
+  }
+
+  /**
    * Opens the details sidebar for an index.
    *
    * @param index - The index.
@@ -533,6 +581,16 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
 
       .spacer {
         flex: 1;
+      }
+
+      .banner {
+        display: flex;
+        gap: var(--uui-size-space-3);
+        align-items: flex-start;
+        color: var(--uui-color-warning-contrast);
+        background: var(--uui-color-warning);
+        padding: var(--uui-size-space-4) var(--uui-size-space-5);
+        border-radius: var(--uui-border-radius);
       }
 
       .selection {

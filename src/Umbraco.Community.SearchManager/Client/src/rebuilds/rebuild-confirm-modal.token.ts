@@ -10,12 +10,19 @@ export interface RebuildConfirmIndex {
   name: string;
   /** Whether search keeps working while it rebuilds. */
   zeroDowntime: boolean;
+  /** The engine id, for example `examine`. */
+  engine: string;
 }
 
 /** What the confirmation shows. */
 export interface RebuildConfirmModalData {
   /** The indexes about to be rebuilt. */
   indexes: RebuildConfirmIndex[];
+  /**
+   * The server's machine name when the site runs on more than one server, so the dialog warns
+   * that core Examine rebuilds only affect this one; undefined otherwise.
+   */
+  loadBalancedServer?: string;
 }
 
 /** What the user chose. */
