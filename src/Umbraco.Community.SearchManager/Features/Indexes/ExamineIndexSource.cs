@@ -30,7 +30,7 @@ internal sealed class ExamineIndexSource(
     public const string EngineId = "examine";
 
     /// <summary>Descriptions of the indexes Umbraco itself registers.</summary>
-    private static readonly Dictionary<string, string> KnownDescriptions = new(
+    internal static readonly Dictionary<string, string> KnownDescriptions = new(
         StringComparer.OrdinalIgnoreCase
     )
     {

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetIndexesData, GetIndexesErrors, GetIndexesResponses } from './types.gen';
+import type { GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,48 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export class ExploreService {
+    public static getExploreSchema<ThrowOnError extends boolean = false>(options: Options<GetExploreSchemaData, ThrowOnError>): RequestResult<GetExploreSchemaResponses, GetExploreSchemaErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetExploreSchemaResponses, GetExploreSchemaErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/fields',
+            ...options
+        });
+    }
+    
+    public static parseExploreInput<ThrowOnError extends boolean = false>(options: Options<ParseExploreInputData, ThrowOnError>): RequestResult<ParseExploreInputResponses, ParseExploreInputErrors, ThrowOnError> {
+        return (options.client ?? client).post<ParseExploreInputResponses, ParseExploreInputErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/parse',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static searchExplore<ThrowOnError extends boolean = false>(options: Options<SearchExploreData, ThrowOnError>): RequestResult<SearchExploreResponses, SearchExploreErrors, ThrowOnError> {
+        return (options.client ?? client).post<SearchExploreResponses, SearchExploreErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/search',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static getExploreTargets<ThrowOnError extends boolean = false>(options?: Options<GetExploreTargetsData, ThrowOnError>): RequestResult<GetExploreTargetsResponses, GetExploreTargetsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetExploreTargetsResponses, GetExploreTargetsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/targets',
+            ...options
+        });
+    }
+}
 
 export class IndexesService {
     public static getIndexes<ThrowOnError extends boolean = false>(options?: Options<GetIndexesData, ThrowOnError>): RequestResult<GetIndexesResponses, GetIndexesErrors, ThrowOnError> {
