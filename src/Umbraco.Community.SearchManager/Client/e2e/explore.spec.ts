@@ -24,7 +24,10 @@ test("turns typed words and field filters into chips that narrow the results", a
 test("opens a result's stored fields in the drawer", async ({ page }) => {
   await page.locator("search-manager-results button.open").first().click();
 
-  await expect(page.locator("search-manager-document-drawer").getByText("__NodeId").first()).toBeVisible();
+  const drawer = page.locator("search-manager-document-drawer");
+  await expect(drawer.getByText("__NodeId").first()).toBeVisible();
+  // Beside the results, not wrapped below them: at 1440 px the three columns do not fit on a line.
+  await expect(drawer).toBeInViewport();
 });
 
 test("reports a Lucene syntax error in native mode", async ({ page }) => {

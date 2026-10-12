@@ -310,7 +310,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       </uui-box>
       ${this._loading && !this._result ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
       <div
-        class="main"
+        class=${openHit ? "main drawer-open" : "main"}
         @search-manager-add-filter=${(event: SearchManagerAddFilterEvent) => void this.#addFilter(event)}
         @search-manager-open-document=${(event: CustomEvent<string | undefined>) => this.#update({ doc: event.detail })}
       >
@@ -495,6 +495,22 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       search-manager-document-drawer {
         flex: 1 1 24rem;
         max-width: 36rem;
+      }
+
+      /*
+       * The fields panel, the results and the drawer only fit on one line from about 73rem
+       * (16 + 30 + 24 plus the gaps). Narrower, flex-wrap would push the drawer below the results,
+       * out of sight; move the fields panel to the end instead, so the drawer stays beside the
+       * results it belongs to.
+       */
+      .main {
+        container-type: inline-size;
+      }
+
+      @container (max-width: 73rem) {
+        .main.drawer-open search-manager-fields-panel {
+          order: 1;
+        }
       }
 
       .error {

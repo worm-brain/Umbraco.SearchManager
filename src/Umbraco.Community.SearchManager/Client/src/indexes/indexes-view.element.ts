@@ -511,7 +511,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     const { value, unit } = agoParts(entry.endedAt);
     const duration = formatDuration(entry.startedAt, entry.endedAt);
     const failed = entry.outcome === "Failed";
-    return html`
+    return html`<div class="last-rebuilt">
       <div title=${this.localize.date(entry.endedAt, DATE_TIME)}>
         ${
           failed
@@ -523,7 +523,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
       <div class=${failed ? "sub error" : "sub"}>
         ${this.localize.term(failed ? "searchManager_lastRebuiltFailed" : "searchManager_lastRebuiltSucceeded", duration)}
       </div>
-    `;
+    </div>`;
   }
 
   /**
@@ -637,6 +637,11 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         color: var(--uui-color-text-alt);
         font-size: var(--uui-type-small-size);
         overflow-wrap: anywhere;
+      }
+
+      /* "9 minutes ago" over "0 s, succeeded": two short lines, not four wrapped words. */
+      .last-rebuilt div {
+        white-space: nowrap;
       }
 
       .select {
