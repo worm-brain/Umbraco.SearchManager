@@ -1,5 +1,5 @@
 import { css, customElement, html, nothing, state } from "@umbraco-cms/backoffice/external/lit";
-import type { UUISelectOption } from "@umbraco-cms/backoffice/external/uui";
+import type { SelectOption } from "../shared/backoffice-floor.js";
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import {
@@ -384,7 +384,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
   }
 
   #renderTargetPicker(target: ExploreTarget | undefined) {
-    const options: Array<UUISelectOption> = (this._targets ?? []).map((candidate) => ({
+    const options: Array<SelectOption> = (this._targets ?? []).map((candidate) => ({
       name:
         candidate.kind === "Searcher"
           ? this.localize.term("searchManager_exploreSearcher", candidate.name)
@@ -415,7 +415,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
   #renderCulturePicker() {
     const cultures = this._schema?.cultures ?? [];
     if (cultures.length === 0) return nothing;
-    const options: Array<UUISelectOption> = [
+    const options: Array<SelectOption> = [
       { name: this.localize.term("searchManager_exploreAllCultures"), value: "", selected: !this._state.culture },
       ...cultures.map((culture) => ({ name: culture, value: culture, selected: culture === this._state.culture })),
     ];

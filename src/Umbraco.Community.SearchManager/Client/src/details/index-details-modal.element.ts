@@ -5,6 +5,7 @@ import { RebuildsService } from "../api/sdk.gen.js";
 import type { RebuildHistoryEntry } from "../api/types.gen.js";
 import { engineLabel, formatCount } from "../indexes/index-format.js";
 import { formatDuration } from "../rebuilds/rebuild-model.js";
+import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { describeError } from "../shared/describe-error.js";
 import type { IndexDetailsModalData } from "./index-details-modal.token.js";
 
@@ -102,7 +103,7 @@ export class SearchManagerIndexDetailsModalElement extends UmbModalBaseElement<I
         ? this.localize.term("searchManager_historyTriggerUser", run.triggeredBy)
         : this.localize.term("searchManager_historyTriggerOther");
     return html`
-      <umb-history-item name=${who} detail=${this.localize.dateTime(run.startedAt)}>
+      <umb-history-item name=${who} detail=${this.localize.date(run.startedAt, DATE_TIME)}>
         <umb-icon
           slot="avatar"
           name=${failed ? "icon-alert" : "icon-check"}

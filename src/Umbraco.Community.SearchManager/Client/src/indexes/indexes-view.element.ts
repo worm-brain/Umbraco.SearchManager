@@ -23,6 +23,7 @@ import {
 import { RebuildsPoller } from "../rebuilds/rebuilds-poller.js";
 import "../rebuilds/rebuilds-panel.element.js";
 import { describeError } from "../shared/describe-error.js";
+import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { engineOptions, filterByEngine, type EngineFilter } from "./engine-filter.js";
 import { engineLabel, formatBytes, formatCount, healthLook } from "./index-format.js";
 
@@ -511,7 +512,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     const duration = formatDuration(entry.startedAt, entry.endedAt);
     const failed = entry.outcome === "Failed";
     return html`
-      <div title=${this.localize.dateTime(entry.endedAt)}>
+      <div title=${this.localize.date(entry.endedAt, DATE_TIME)}>
         ${
           failed
             ? html`<umb-icon name="icon-alert" style="color: var(--uui-color-danger-standalone)"></umb-icon>`

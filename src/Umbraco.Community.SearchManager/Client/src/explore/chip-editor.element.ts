@@ -7,7 +7,7 @@ import {
   state,
   type PropertyValues,
 } from "@umbraco-cms/backoffice/external/lit";
-import type { UUISelectOption } from "@umbraco-cms/backoffice/external/uui";
+import type { SelectOption } from "../shared/backoffice-floor.js";
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import type { ExploreSchema, Filter, FilterOperator } from "../api/index.js";
@@ -95,7 +95,7 @@ export class SearchManagerChipEditorElement extends UmbLitElement {
         ? fieldLabel(this.schema, draft.field ?? "")
         : this.localize.term(draft.kind === "Text" ? "searchManager_fieldText" : "searchManager_fieldLucene");
     const operators = editorOperators(draft, this.schema);
-    const options: Array<UUISelectOption> = operators.map((op) => ({
+    const options: Array<SelectOption> = operators.map((op) => ({
       name: this.localize.term(`searchManager_op${op}`),
       value: op,
       selected: op === draft.op,

@@ -7,6 +7,7 @@ import type { IndexSummary, RebuildHistoryEntry } from "../api/types.gen.js";
 import { formatCount } from "../indexes/index-format.js";
 import { agoParts } from "../rebuilds/history-model.js";
 import { formatDuration } from "../rebuilds/rebuild-model.js";
+import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { searchManagerViewPath } from "./search-manager-links.js";
 
 /** Umbraco Search's entity type for an index workspace (`UMB_SEARCH_INDEX_ENTITY_TYPE`, 17.2 and 18.2). */
@@ -144,7 +145,7 @@ export class SearchManagerSearchIndexBoxElement extends UmbLitElement {
    * @returns The text.
    */
   #describe(run: RebuildHistoryEntry): string {
-    return `${this.localize.dateTime(run.startedAt)}: ${this.#outcome(run)}`;
+    return `${this.localize.date(run.startedAt, DATE_TIME)}: ${this.#outcome(run)}`;
   }
 
   /**
