@@ -17,6 +17,7 @@
     <Title>Umbraco Search Manager: Umbraco Search adapter</Title>
     <Description>Adds Umbraco Search indexes to Umbraco Search Manager. Install it on sites that use Umbraco Search.</Description>
     <PackageTags>umbraco;umbraco-marketplace;search;examine;umbraco-search</PackageTags>
+    <NuGetReadmeSource>README.UmbracoSearch.md</NuGetReadmeSource>
     <Version>$(UmbracoMajor).0.0-dev</Version>
   </PropertyGroup>
 

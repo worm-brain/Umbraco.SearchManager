@@ -1,0 +1,134 @@
+import { expect, test } from "../support/test.js";
+import { openExplore, openIndexes, searchBox, selectBox, waitForSeededIndex } from "../support/search-manager.js";
+import { repoRoot } from "../support/sites.js";
+import type { Page } from "@playwright/test";
+
+/**
+ * The documentation screenshots, written to `docs/images/`. Run with `bun run docs:screenshots`
+ * (playwright.docs.config.ts). Each test sets up one view the docs show and saves it; they run in
+ * order on one worker.
+ */
+
+/** Saves the viewport to `docs/images/{name}.png`, after the view has settled. */
+async function shoot(page: Page, name: string): Promise<void> {
+  // Let transitions, popovers and late requests finish so a shot never catches a half-drawn view.
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${repoRoot}docs/images/${name}.png` });
+}
+
+/**
+ * Opens the Indexes view with an empty Rebuilds panel: runs left over from earlier work (or an
+ * earlier screenshot run) would crowd the table out of the shot.
+ */
+async function openCleanIndexes(page: Page, index: string): Promise<void> {
+  await openIndexes(page, index);
+  const clear = page.getByRole("button", { name: "Clear finished" });
+  if (await clear.isVisible()) {
+    await clear.click();
+    await expect(page.locator("search-manager-rebuilds-panel li")).toHaveCount(0);
+  }
+}
+
+test("indexes", async ({ page }) => {
+  await openCleanIndexes(page, "Umb_PublishedContent");
+  await shoot(page, "indexes");
+});
+
+test("rebuild confirmation", async ({ page }) => {
+  await openCleanIndexes(page, "Umb_PublishedContent");
+  await selectBox(page, "ExternalIndex").click();
+  await selectBox(page, "Umb_PublishedContent").click();
+  await page.getByRole("button", { name: "Rebuild 2 indexes" }).first().click();
+  await expect(page.getByText("Rebuild 2 indexes?")).toBeVisible();
+  await shoot(page, "rebuild-confirm");
+});
+
+test("rebuilds panel and history", async ({ page }) => {
+  test.setTimeout(300_000);
+  await openCleanIndexes(page, "ProductIndex");
+  for (const index of ["ProductIndex", "InternalIndex", "MembersIndex"]) {
+    await selectBox(page, index).click();
+  }
+  await page.getByRole("button", { name: "Rebuild 3 indexes" }).first().click();
+  await page.locator("uui-dialog-layout uui-button[look=primary]").click();
+
+  const panel = page.locator("search-manager-rebuilds-panel");
+  await expect(
+    panel
+      .locator("li")
+      .filter({ hasText: "MembersIndex" })
+      .getByText(/Done in/),
+  ).toBeVisible({
+    timeout: 240_000,
+  });
+  await shoot(page, "rebuilds");
+
+  await page.getByRole("button", { name: "Details and history for ProductIndex" }).click();
+  await expect(
+    page.locator("uui-box").filter({ hasText: "Rebuild history" }).getByText("Succeeded").first(),
+  ).toBeVisible();
+  await shoot(page, "index-details");
+});
+
+test("explore with chips and the fields panel", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await searchBox(page).fill("umbraco type:blogPost");
+  await searchBox(page).press("Enter");
+  await expect(page.locator("search-manager-filter-chip")).toHaveCount(2);
+  await shoot(page, "explore");
+});
+
+test("field suggestions", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await searchBox(page).fill("type:");
+  await expect(page.getByText("Values of", { exact: false }).first()).toBeVisible();
+  await shoot(page, "suggestions");
+});
+
+test("document drawer", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await searchBox(page).fill("type:blogPost");
+  await searchBox(page).press("Enter");
+  await page.locator("search-manager-results button.open").first().click();
+  await expect(page.locator("search-manager-document-drawer").getByText("__NodeId").first()).toBeVisible();
+  await shoot(page, "document-drawer");
+});
+
+test("show query", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await searchBox(page).fill("umbraco type:blogPost");
+  await searchBox(page).press("Enter");
+  await page.getByRole("button", { name: "Show query" }).click();
+  await expect(page.getByText("C# with Examine").first()).toBeVisible();
+  await shoot(page, "show-query");
+});
+
+test("native mode", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await page.getByRole("button", { name: "Lucene", exact: true }).click();
+  await page.locator("search-manager-native-box uui-input input").fill("+__NodeTypeAlias:blogpost and level:2");
+  await expect(page.getByText(/^Fix:/).first()).toBeVisible();
+  await shoot(page, "native-mode");
+});
+
+test("explore an Umbraco Search index", async ({ page }) => {
+  await openExplore(page, "Umb_PublishedContent");
+  await page.locator("uui-select#culture select").selectOption("en-US");
+  await waitForSeededIndex(page, 10);
+  await searchBox(page).fill('umbraco "getting started"');
+  await searchBox(page).press("Enter");
+  await expect(page.locator("search-manager-filter-chip")).toHaveCount(2);
+  await shoot(page, "explore-umbraco-search");
+});
+
+test("Umbraco Search index page box", async ({ page }) => {
+  await page.goto("/umbraco/section/settings/workspace/search-index/edit/Umb_PublishedContent");
+  await expect(page.locator("uui-box").filter({ hasText: "Search Manager" })).toBeVisible();
+  await shoot(page, "umbraco-search-box");
+});

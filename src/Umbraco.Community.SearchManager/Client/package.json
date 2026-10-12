@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "e2e": "bun e2e/prepare.ts && playwright test",
     "e2e:report": "playwright show-report e2e/playwright-report",
+    "docs:screenshots": "playwright test -c playwright.docs.config.ts",
     "generate": "bun scripts/generate-openapi.ts https://localhost:44380/umbraco/swagger/search-manager/swagger.json"
   },
   "devDependencies": {

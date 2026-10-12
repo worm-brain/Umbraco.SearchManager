@@ -1,0 +1,35 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "Umbraco Search Manager: Umbraco Search adapter",
+  "Description": "Adds Umbraco Search indexes to Umbraco Search Manager: health, rebuilds with history, Explore with filter chips, and a Search Manager box on Umbraco Search's index page. Install it on sites that use Umbraco Search.",
+  "IsSubPackageOf": "Umbraco.Community.SearchManager",
+  "Category": "Search",
+  "AlternateCategory": "Developer Tools",
+  "PackageType": "Package",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "Tags": [
+    "search",
+    "umbraco search",
+    "examine",
+    "indexes",
+    "backoffice"
+  ],
+  "DocumentationUrl": "https://github.com/worm-brain/Umbraco.SearchManager/blob/main/docs/how-to/use-with-umbraco-search.md",
+  "IssueTrackerUrl": "https://github.com/worm-brain/Umbraco.SearchManager/issues",
+  "AuthorDetails": {
+    "Name": "Jack Stunell",
+    "SyncContributorsFromRepository": true
+  },
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/explore-umbraco-search.png",
+      "Caption": "Explore on an Umbraco Search index: chips Umbraco Search cannot run are struck through and not sent."
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/worm-brain/Umbraco.SearchManager/main/docs/images/umbraco-search-box.png",
+      "Caption": "The Search Manager box on Umbraco Search's index page."
+    }
+  ]
+}
