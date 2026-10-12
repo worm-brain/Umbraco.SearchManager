@@ -7,6 +7,7 @@ import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import { IndexesService, RebuildsService, ServerService } from "../api/sdk.gen.js";
 import type { IndexSummary, RebuildHistoryEntry, RebuildRun, ServerInfo } from "../api/types.gen.js";
 import { SEARCH_MANAGER_INDEX_DETAILS_MODAL } from "../details/index-details-modal.token.js";
+import { indexFromQuery } from "../umbraco-search/search-manager-links.js";
 import { agoParts, latestEntryByIndex } from "../rebuilds/history-model.js";
 import { SEARCH_MANAGER_REBUILD_CONFIRM_MODAL } from "../rebuilds/rebuild-confirm-modal.token.js";
 import { REBUILD_EVENT_SOURCES, REBUILD_EVENT_TYPES } from "../rebuilds/rebuild-events.js";
@@ -43,6 +44,9 @@ import { engineLabel, formatBytes, formatCount, healthLook } from "./index-forma
  *
  * Server: the toolbar names the server the user is on (`GET /server`); on a load-balanced site a
  * banner, and a line in the confirmation, say core Examine rebuilds only affect this server.
+ *
+ * A link with `?index=<name>` (from the Search Manager box on Umbraco Search's index page) opens
+ * that index's details sidebar once the list has loaded.
  *
  * History: "Last rebuilt" comes from `GET /rebuilds/history/latest` (reloaded with the indexes);
  * the name and the details button open the details sidebar (history and provider properties).
@@ -86,6 +90,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   private _selected = new Set<string>();
 
   #notifications?: typeof UMB_NOTIFICATION_CONTEXT.TYPE;
+  #detailsRequestHandled = false;
   #poller = new RebuildsPoller(
     () => RebuildsService.getRebuilds(),
     (runs) => this.#onRuns(runs),
@@ -141,6 +146,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     if (data) {
       this._indexes = data;
       this._error = undefined;
+      this.#openRequestedDetails();
     } else {
       this._error = describeError(error, response);
     }
@@ -538,6 +544,18 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         </span>
       </div>
     `;
+  }
+
+  /**
+   * Opens the details sidebar for the index named in the URL (`?index=`, as links from Umbraco
+   * Search's index page carry), once, after the first load.
+   */
+  #openRequestedDetails(): void {
+    if (this.#detailsRequestHandled) return;
+    this.#detailsRequestHandled = true;
+    const name = indexFromQuery(window.location.search);
+    const index = name && this._indexes.find((candidate) => indexKey(candidate.name) === indexKey(name));
+    if (index) this.#openDetails(index);
   }
 
   /**

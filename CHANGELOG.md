@@ -35,3 +35,6 @@ All notable changes to this project are documented here. The format follows
 - The Indexes view shows which server you are on. On a load-balanced site, a banner and a line in
   the rebuild confirmation say that core Examine rebuilds only affect this server, while Umbraco
   Search indexes rebuild on every server.
+- A Search Manager box on Umbraco Search's index page (with the adapter package): the last
+  rebuild, the runs before it and the field count, with links to Explore, field statistics and
+  the index's history in Search Manager.

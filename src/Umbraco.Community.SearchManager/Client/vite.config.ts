@@ -9,10 +9,15 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      // The bundle entry registers every manifest the package provides.
-      entry: "src/bundle.manifests.ts",
+      entry: {
+        // The bundle entry registers every manifest the package provides.
+        "umbraco-community-search-manager": "src/bundle.manifests.ts",
+        // The box on Umbraco Search's index page; the Umbraco Search adapter registers it server
+        // side, so it loads only where Umbraco Search is installed.
+        "umbraco-search-index-box": "src/umbraco-search/search-index-box.element.ts",
+      },
       formats: ["es"],
-      fileName: "umbraco-community-search-manager",
+      fileName: (_format, entryName) => `${entryName}.js`,
     },
     // Build into the Razor Class Library's static web assets so the package serves it from /App_Plugins.
     outDir: "../wwwroot/App_Plugins/UmbracoCommunitySearchManager",

@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Infrastructure.Manifest;
 using Umbraco.Cms.Search.Core.Notifications;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Infrastructure;
+using Umbraco.Community.SearchManager.UmbracoSearch.Backoffice;
 using Umbraco.Community.SearchManager.UmbracoSearch.Indexes;
 using Umbraco.Extensions;
 
@@ -24,6 +26,9 @@ public sealed class UmbracoSearchManagerComposer : IComposer
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddSingleton<IIndexSource, UmbracoSearchIndexSource>();
+
+        // The Search Manager box on Umbraco Search's index page.
+        builder.Services.AddSingleton<IPackageManifestReader, SearchIndexBoxManifestReader>();
 
         // Rebuilds: Umbraco Search only announces its rebuilds through notifications.
         builder.Services.AddSingleton<UmbracoSearchRebuildTracker>();

@@ -108,6 +108,12 @@ export default {
     historyFailed: "Failed",
     historyDetail: (duration: string, before: string, after: string, server: string) =>
       `${duration}, documents ${before} to ${after}, on ${server}`,
+    // The Search Manager box on Umbraco Search's index page.
+    boxRecentRuns: "Earlier runs",
+    boxExplore: "Explore",
+    boxFieldStatistics: "Field statistics",
+    boxHistory: "History",
+
     // Server: which server the user is on, and the load-balancing warning.
     serverLine: (machine: string, role: string) => `Server ${machine} (${role})`,
     serverRoleSingle: "single server",
