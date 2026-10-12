@@ -34,4 +34,18 @@ internal static partial class UmbracoSearchIndexLog
         string physicalIndex,
         string indexAlias
     );
+
+    /// <summary>A rebuild started outside Search Manager could not be added to the history.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">Why.</param>
+    /// <param name="indexAlias">The Umbraco Search alias.</param>
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Search Manager could not record the rebuild of Umbraco Search index {IndexAlias} in its history"
+    )]
+    public static partial void HistoryNotRecorded(
+        this ILogger logger,
+        Exception exception,
+        string indexAlias
+    );
 }

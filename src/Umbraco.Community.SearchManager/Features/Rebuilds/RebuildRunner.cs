@@ -6,11 +6,17 @@ namespace Umbraco.Community.SearchManager.Features.Rebuilds;
 
 /// <summary>
 /// Runs one started rebuild run to its end: asks the index's source to rebuild it, feeds its
-/// progress to the queue, and records success (with the new document count) or the failure.
+/// progress to the queue, and records success (with the new document count) or the failure, in
+/// the queue and in the persisted history.
 /// </summary>
+/// <param name="queue">The queue the run belongs to.</param>
+/// <param name="registry">Finds the run's index source.</param>
+/// <param name="history">The persisted history.</param>
+/// <param name="logger">Logs the run.</param>
 internal sealed class RebuildRunner(
     IRebuildQueue queue,
     IIndexSourceRegistry registry,
+    IRebuildHistory history,
     ILogger<RebuildRunner> logger
 )
 {
@@ -58,6 +64,41 @@ internal sealed class RebuildRunner(
 
         RebuildRun finished = queue.Complete(run.Id, documentsAfter, failure);
         logger.RebuildFinished(run.IndexName, finished.Status);
+        Record(finished);
+    }
+
+    /// <summary>
+    /// Adds a finished run to the persisted history. A history that cannot be written is logged
+    /// and never changes the run's outcome.
+    /// </summary>
+    /// <param name="finished">The finished run.</param>
+    private void Record(RebuildRun finished)
+    {
+        try
+        {
+            history.Add(
+                new RebuildHistoryEntry(
+                    finished.IndexName,
+                    finished.Engine,
+                    Environment.MachineName,
+                    RebuildTrigger.User,
+                    finished.TriggeredBy,
+                    finished.StartedAt ?? finished.QueuedAt,
+                    finished.EndedAt ?? finished.QueuedAt,
+                    finished.Status,
+                    finished.DocumentsBefore,
+                    finished.DocumentsAfter,
+                    finished.Error,
+                    finished.IsMemberIndex
+                )
+            );
+        }
+#pragma warning disable CA1031 // The rebuild itself is done; a history failure is only logged.
+        catch (Exception exception)
+#pragma warning restore CA1031
+        {
+            logger.HistoryNotRecorded(exception, finished.IndexName);
+        }
     }
 
     /// <summary>Forwards a source's document counts to the queue, synchronously (unlike <see cref="Progress{T}"/>).</summary>

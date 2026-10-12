@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses } from './types.gen';
+import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -61,6 +61,22 @@ export class RebuildsService {
         return (options?.client ?? client).delete<ClearFinishedRebuildsResponses, ClearFinishedRebuildsErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/rebuilds/finished',
+            ...options
+        });
+    }
+    
+    public static getRebuildHistory<ThrowOnError extends boolean = false>(options?: Options<GetRebuildHistoryData, ThrowOnError>): RequestResult<GetRebuildHistoryResponses, GetRebuildHistoryErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetRebuildHistoryResponses, GetRebuildHistoryErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/history',
+            ...options
+        });
+    }
+    
+    public static getLatestRebuilds<ThrowOnError extends boolean = false>(options?: Options<GetLatestRebuildsData, ThrowOnError>): RequestResult<GetLatestRebuildsResponses, GetLatestRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetLatestRebuildsResponses, GetLatestRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/history/latest',
             ...options
         });
     }

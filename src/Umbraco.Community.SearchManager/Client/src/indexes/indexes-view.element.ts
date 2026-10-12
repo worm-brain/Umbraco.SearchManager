@@ -4,10 +4,13 @@ import { umbOpenModal } from "@umbraco-cms/backoffice/modal";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import { IndexesService, RebuildsService } from "../api/sdk.gen.js";
-import type { IndexSummary, RebuildRun } from "../api/types.gen.js";
+import type { IndexSummary, RebuildHistoryEntry, RebuildRun } from "../api/types.gen.js";
+import { SEARCH_MANAGER_INDEX_DETAILS_MODAL } from "../details/index-details-modal.token.js";
+import { agoParts, latestEntryByIndex } from "../rebuilds/history-model.js";
 import { SEARCH_MANAGER_REBUILD_CONFIRM_MODAL } from "../rebuilds/rebuild-confirm-modal.token.js";
 import {
   estimatePercent,
+  formatDuration,
   indexKey,
   isActive,
   latestRunByIndex,
@@ -34,6 +37,9 @@ import { engineLabel, formatBytes, formatCount, healthLook } from "./index-forma
  * panel shows the server's runs, polled while any is queued or running; the index list reloads
  * when a run finishes so counts are fresh.
  *
+ * History: "Last rebuilt" comes from `GET /rebuilds/history/latest` (reloaded with the indexes);
+ * the name and the details button open the details sidebar (history and provider properties).
+ *
  * Bound by the `Umbraco.Community.SearchManager.WorkspaceView.Indexes` manifest.
  *
  * @element search-manager-indexes-view
@@ -59,6 +65,10 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   /** The server's rebuild runs, oldest first. */
   @state()
   private _runs: RebuildRun[] = [];
+
+  /** Each index's latest recorded rebuild, keyed by index. */
+  @state()
+  private _latest = new Map<string, RebuildHistoryEntry>();
 
   /** Names of the selected indexes. */
   @state()
@@ -88,11 +98,18 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
     this.#poller.stop();
   }
 
-  /** Fetches the index list, keeping the previous rows while it loads. */
+  /**
+   * Fetches the index list (keeping the previous rows while it loads) and each index's latest
+   * recorded rebuild. A history that cannot be read leaves "Last rebuilt" as it was.
+   */
   async #load(): Promise<void> {
     this._loading = true;
-    const { data, error, response } = await IndexesService.getIndexes();
+    const [{ data, error, response }, latest] = await Promise.all([
+      IndexesService.getIndexes(),
+      RebuildsService.getLatestRebuilds(),
+    ]);
     this._loading = false;
+    if (latest.data) this._latest = latestEntryByIndex(latest.data);
     if (data) {
       this._indexes = data;
       this._error = undefined;
@@ -305,6 +322,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
           <uui-table-head-cell class="number">${this.localize.term("searchManager_columnDeleted")}</uui-table-head-cell>
           <uui-table-head-cell class="number">${this.localize.term("searchManager_columnFields")}</uui-table-head-cell>
           <uui-table-head-cell class="number">${this.localize.term("searchManager_columnSize")}</uui-table-head-cell>
+          <uui-table-head-cell>${this.localize.term("searchManager_columnLastRebuilt")}</uui-table-head-cell>
           <uui-table-head-cell class="actions"
             >${this.localize.term("searchManager_columnActions")}</uui-table-head-cell
           >
@@ -340,7 +358,14 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         </uui-table-cell>
         <uui-table-cell>
           <div class="name">
-            <strong>${index.name}</strong>
+            <button
+              type="button"
+              class="open"
+              title=${this.localize.term("searchManager_detailsOpen", index.name)}
+              @click=${() => this.#openDetails(index)}
+            >
+              <strong>${index.name}</strong>
+            </button>
             <uui-tag look="secondary" color=${index.engine === "examine" ? "default" : "positive"}
               >${engineLabel(index.engine)}</uui-tag
             >
@@ -365,6 +390,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         <uui-table-cell class="number">${formatCount(index.deletedDocumentCount)}</uui-table-cell>
         <uui-table-cell class="number">${formatCount(index.fieldCount)}</uui-table-cell>
         <uui-table-cell class="number">${formatBytes(index.sizeInBytes)}</uui-table-cell>
+        <uui-table-cell>${this.#renderLastRebuilt(this._latest.get(indexKey(index.name)))}</uui-table-cell>
         <uui-table-cell class="actions">
           <uui-button
             look="secondary"
@@ -374,6 +400,14 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
             ?disabled=${!!blocked}
             @click=${() => void this.#rebuild([index.name])}
             ><umb-icon name="icon-sync"></umb-icon
+          ></uui-button>
+          <uui-button
+            look="secondary"
+            compact
+            label=${this.localize.term("searchManager_detailsOpen", index.name)}
+            title=${this.localize.term("searchManager_detailsOpen", index.name)}
+            @click=${() => this.#openDetails(index)}
+            ><umb-icon name="icon-info"></umb-icon
           ></uui-button>
         </uui-table-cell>
       </uui-table-row>
@@ -410,6 +444,41 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   #estimateText(run: RebuildRun): string | undefined {
     const percent = estimatePercent(run);
     return percent === null ? undefined : this.localize.term("searchManager_rebuildRunningHealth", percent);
+  }
+
+  /**
+   * Renders the "Last rebuilt" cell: how long ago, then the duration and outcome.
+   *
+   * @param entry - The index's latest recorded rebuild, if any.
+   * @returns The template.
+   */
+  #renderLastRebuilt(entry: RebuildHistoryEntry | undefined) {
+    if (!entry) return html`<span class="sub">${this.localize.term("searchManager_lastRebuiltNone")}</span>`;
+    const { value, unit } = agoParts(entry.endedAt);
+    const duration = formatDuration(entry.startedAt, entry.endedAt);
+    const failed = entry.outcome === "Failed";
+    return html`
+      <div title=${this.localize.dateTime(entry.endedAt)}>
+        ${
+          failed
+            ? html`<umb-icon name="icon-alert" style="color: var(--uui-color-danger-standalone)"></umb-icon>`
+            : nothing
+        }
+        ${this.localize.relativeTime(value, unit, { numeric: "auto" })}
+      </div>
+      <div class=${failed ? "sub error" : "sub"}>
+        ${this.localize.term(failed ? "searchManager_lastRebuiltFailed" : "searchManager_lastRebuiltSucceeded", duration)}
+      </div>
+    `;
+  }
+
+  /**
+   * Opens the details sidebar for an index.
+   *
+   * @param index - The index.
+   */
+  #openDetails(index: IndexSummary): void {
+    void umbOpenModal(this, SEARCH_MANAGER_INDEX_DETAILS_MODAL, { data: { index } }).catch(() => undefined);
   }
 
   /**
@@ -477,13 +546,32 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         width: 44px;
       }
 
+      /* The index name opens the details sidebar; it looks like the name, not a button. */
+      .open {
+        all: unset;
+        cursor: pointer;
+      }
+
+      .open:hover strong,
+      .open:focus-visible strong {
+        text-decoration: underline;
+      }
+
+      .open:focus-visible {
+        outline: 2px solid var(--uui-color-focus);
+        outline-offset: 2px;
+      }
+
       .number {
         text-align: right;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
       }
 
+      /* Row buttons sit side by side. */
       .actions {
         text-align: right;
+        white-space: nowrap;
       }
 
       .error {

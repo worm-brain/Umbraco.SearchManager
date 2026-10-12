@@ -12,6 +12,7 @@ public sealed class RebuildRunnerTests : IDisposable
     private readonly RebuildQueue _queue = new(TimeProvider.System);
     private readonly IIndexSource _source = Substitute.For<IIndexSource>();
     private readonly IIndexSourceRegistry _registry = Substitute.For<IIndexSourceRegistry>();
+    private readonly IRebuildHistory _history = Substitute.For<IRebuildHistory>();
 
     public RebuildRunnerTests()
     {
@@ -93,7 +94,71 @@ public sealed class RebuildRunnerTests : IDisposable
         Assert.Equal(RebuildStatus.Failed, Assert.Single(_queue.GetRuns()).Status);
     }
 
-    private RebuildRunner Runner() => new(_queue, _registry, NullLogger<RebuildRunner>.Instance);
+    [Fact]
+    public async Task RunAsync_SourceSucceeds_AddsTheRunToTheHistory()
+    {
+        // Arrange
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        _history
+            .Received(1)
+            .Add(
+                Arg.Is<RebuildHistoryEntry>(entry =>
+                    entry.IndexName == "ProductIndex"
+                    && entry.Trigger == RebuildTrigger.User
+                    && entry.TriggeredBy == "Jack"
+                    && entry.Outcome == RebuildStatus.Succeeded
+                    && entry.DocumentsBefore == 50
+                    && entry.DocumentsAfter == 60
+                    && entry.Server == Environment.MachineName
+                )
+            );
+    }
+
+    [Fact]
+    public async Task RunAsync_SourceThrows_AddsTheFailureWithItsErrorToTheHistory()
+    {
+        // Arrange
+        _source
+            .RebuildAsync("ProductIndex", Arg.Any<IProgress<long>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Lock obtain timed out"));
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        _history
+            .Received(1)
+            .Add(
+                Arg.Is<RebuildHistoryEntry>(entry =>
+                    entry.Outcome == RebuildStatus.Failed && entry.Error == "Lock obtain timed out"
+                )
+            );
+    }
+
+    [Fact]
+    public async Task RunAsync_HistoryCannotBeWritten_StillFinishesTheRun()
+    {
+        // Arrange
+        _history
+            .When(history => history.Add(Arg.Any<RebuildHistoryEntry>()))
+            .Throw(new InvalidOperationException("Database is locked"));
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(RebuildStatus.Succeeded, Assert.Single(_queue.GetRuns()).Status);
+    }
+
+    private RebuildRunner Runner() =>
+        new(_queue, _registry, _history, NullLogger<RebuildRunner>.Instance);
 
     private RebuildRun Start(string name)
     {

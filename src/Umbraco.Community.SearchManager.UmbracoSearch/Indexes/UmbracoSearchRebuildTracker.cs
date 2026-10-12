@@ -30,23 +30,31 @@ internal sealed class UmbracoSearchRebuildTracker
 
     /// <summary>Records that Umbraco Search started rebuilding an index on this server.</summary>
     /// <param name="indexAlias">The alias.</param>
-    public void OnStarting(string indexAlias)
+    /// <returns>Whether a Search Manager rebuild is watching the index.</returns>
+    public bool OnStarting(string indexAlias)
     {
-        if (_watches.TryGetValue(indexAlias, out RebuildWatch? watch))
+        if (!_watches.TryGetValue(indexAlias, out RebuildWatch? watch))
         {
-            watch.StartedSource.TrySetResult();
+            return false;
         }
+
+        watch.StartedSource.TrySetResult();
+        return true;
     }
 
     /// <summary>Records that Umbraco Search finished rebuilding an index on this server.</summary>
     /// <param name="indexAlias">The alias.</param>
-    public void OnCompleted(string indexAlias)
+    /// <returns>Whether a Search Manager rebuild is watching the index.</returns>
+    public bool OnCompleted(string indexAlias)
     {
-        if (_watches.TryGetValue(indexAlias, out RebuildWatch? watch))
+        if (!_watches.TryGetValue(indexAlias, out RebuildWatch? watch))
         {
-            watch.StartedSource.TrySetResult();
-            watch.CompletedSource.TrySetResult();
+            return false;
         }
+
+        watch.StartedSource.TrySetResult();
+        watch.CompletedSource.TrySetResult();
+        return true;
     }
 
     /// <summary>Stops watching, unless a newer watch replaced this one.</summary>
@@ -82,17 +90,35 @@ internal sealed class UmbracoSearchRebuildTracker
     }
 }
 
-/// <summary>Forwards Umbraco Search's rebuild notifications to <see cref="UmbracoSearchRebuildTracker"/>.</summary>
+/// <summary>
+/// Forwards Umbraco Search's rebuild notifications to <see cref="UmbracoSearchRebuildTracker"/>,
+/// and the ones no Search Manager rebuild is watching (rebuilds started elsewhere) to
+/// <see cref="UmbracoSearchExternalRebuildRecorder"/> for the history.
+/// </summary>
 /// <param name="tracker">The tracker.</param>
-internal sealed class UmbracoSearchRebuildNotificationHandler(UmbracoSearchRebuildTracker tracker)
+/// <param name="recorder">Records rebuilds started outside Search Manager.</param>
+internal sealed class UmbracoSearchRebuildNotificationHandler(
+    UmbracoSearchRebuildTracker tracker,
+    UmbracoSearchExternalRebuildRecorder recorder
+)
     : INotificationHandler<IndexRebuildStartingNotification>,
         INotificationHandler<IndexRebuildCompletedNotification>
 {
     /// <inheritdoc />
-    public void Handle(IndexRebuildStartingNotification notification) =>
-        tracker.OnStarting(notification.IndexAlias);
+    public void Handle(IndexRebuildStartingNotification notification)
+    {
+        if (!tracker.OnStarting(notification.IndexAlias))
+        {
+            recorder.OnStarting(notification.IndexAlias);
+        }
+    }
 
     /// <inheritdoc />
-    public void Handle(IndexRebuildCompletedNotification notification) =>
-        tracker.OnCompleted(notification.IndexAlias);
+    public void Handle(IndexRebuildCompletedNotification notification)
+    {
+        if (!tracker.OnCompleted(notification.IndexAlias))
+        {
+            recorder.OnCompleted(notification.IndexAlias);
+        }
+    }
 }

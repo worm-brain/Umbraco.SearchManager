@@ -27,6 +27,7 @@ public sealed class UmbracoSearchManagerComposer : IComposer
 
         // Rebuilds: Umbraco Search only announces its rebuilds through notifications.
         builder.Services.AddSingleton<UmbracoSearchRebuildTracker>();
+        builder.Services.AddSingleton<UmbracoSearchExternalRebuildRecorder>();
         builder.AddNotificationHandler<
             IndexRebuildStartingNotification,
             UmbracoSearchRebuildNotificationHandler

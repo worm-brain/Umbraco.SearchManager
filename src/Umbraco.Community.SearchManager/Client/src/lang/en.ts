@@ -89,5 +89,25 @@ export default {
     rebuildsSucceeded: (duration: string, documents: string) => `Done in ${duration}, ${documents} documents`,
     rebuildsFailed: (duration: string, error: string) => `Failed after ${duration}: ${error}`,
     rebuildsCancelled: "Cancelled before it started",
+
+    // Rebuild history: the "Last rebuilt" column and the details sidebar.
+    columnLastRebuilt: "Last rebuilt",
+    lastRebuiltNone: "Not recorded",
+    lastRebuiltSucceeded: (duration: string) => `${duration}, succeeded`,
+    lastRebuiltFailed: (duration: string) => `Failed after ${duration}`,
+    detailsOpen: (name: string) => `Details and history for ${name}`,
+    detailsHistoryTitle: "Rebuild history",
+    detailsHistoryHint: "Kept in the database, last 20 runs",
+    detailsNoRuns: "No rebuilds recorded yet.",
+    detailsLoadError: (message: string) => `Could not load the history: ${message}`,
+    detailsPropertiesTitle: "Index properties",
+    detailsNoProperties: "This index reports no properties.",
+    historyTriggerUser: (name: string) => `${name}, from Search Manager`,
+    historyTriggerOther: "Started outside Search Manager",
+    historySucceeded: "Succeeded",
+    historyFailed: "Failed",
+    historyDetail: (duration: string, before: string, after: string, server: string) =>
+      `${duration}, documents ${before} to ${after}, on ${server}`,
+    historyDetailNoCounts: (duration: string, server: string) => `${duration}, on ${server}`,
   },
 } satisfies UmbLocalizationDictionary;

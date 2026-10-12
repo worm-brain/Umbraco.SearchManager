@@ -36,6 +36,8 @@
       Version="$(UmbracoDevVersion)"
     />
     <PackageVersion Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+    <!-- Tests only: runs the rebuild history migration and repository against a real SQLite file. -->
+    <PackageVersion Include="Umbraco.Cms.Persistence.Sqlite" Version="$(UmbracoDevVersion)" />
   </ItemGroup>
 
   <ItemGroup Label="Umbraco Search">

@@ -23,3 +23,8 @@ All notable changes to this project are documented here. The format follows
   when the browser leaves; queued runs can be cancelled. The Rebuilds panel shows queued, running
   (with an estimated percentage), succeeded, failed (with the error) and cancelled runs. A core
   Examine run is marked done only once Lucene has committed.
+- Rebuild history, kept in the database (a package migration adds the
+  `searchManagerRebuildHistory` table): the last 20 runs per index with who started them, when,
+  how long they took, the outcome, document counts, the server and the error of a failure. The
+  Indexes view gets a "Last rebuilt" column and a details sidebar with the history and the
+  index's provider properties. Umbraco Search rebuilds started elsewhere are recorded too.

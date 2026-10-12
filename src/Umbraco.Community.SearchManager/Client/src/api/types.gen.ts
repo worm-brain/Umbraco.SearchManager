@@ -51,6 +51,21 @@ export type QueueRebuildsRequest = {
     mode: RebuildMode;
 };
 
+export type RebuildHistoryEntry = {
+    indexName: string;
+    engine: string;
+    server: string;
+    trigger: RebuildTrigger;
+    triggeredBy?: string | null;
+    startedAt: string;
+    endedAt: string;
+    outcome: RebuildStatus;
+    documentsBefore?: number | null;
+    documentsAfter?: number | null;
+    error?: string | null;
+    isMemberIndex: boolean;
+};
+
 export type RebuildMode = 'OneAtATime' | 'AllAtOnce';
 
 export type RebuildRefusal = {
@@ -78,6 +93,8 @@ export type RebuildRun = {
 };
 
 export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled';
+
+export type RebuildTrigger = 'User' | 'Other';
 
 export type GetIndexesData = {
     body?: never;
@@ -221,3 +238,59 @@ export type ClearFinishedRebuildsResponses = {
      */
     200: unknown;
 };
+
+export type GetRebuildHistoryData = {
+    body?: never;
+    path?: never;
+    query?: {
+        indexName?: string;
+    };
+    url: '/umbraco/search-manager/api/v1/rebuilds/history';
+};
+
+export type GetRebuildHistoryErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetRebuildHistoryResponses = {
+    /**
+     * OK
+     */
+    200: Array<RebuildHistoryEntry>;
+};
+
+export type GetRebuildHistoryResponse = GetRebuildHistoryResponses[keyof GetRebuildHistoryResponses];
+
+export type GetLatestRebuildsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/rebuilds/history/latest';
+};
+
+export type GetLatestRebuildsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetLatestRebuildsResponses = {
+    /**
+     * OK
+     */
+    200: Array<RebuildHistoryEntry>;
+};
+
+export type GetLatestRebuildsResponse = GetLatestRebuildsResponses[keyof GetLatestRebuildsResponses];

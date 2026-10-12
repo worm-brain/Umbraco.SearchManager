@@ -47,4 +47,18 @@ internal static partial class RebuildLog
         string indexName,
         RebuildStatus status
     );
+
+    /// <summary>A finished rebuild could not be added to the history.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">Why.</param>
+    /// <param name="indexName">The index.</param>
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Search Manager could not record the rebuild of index {IndexName} in its history"
+    )]
+    public static partial void HistoryNotRecorded(
+        this ILogger logger,
+        Exception exception,
+        string indexName
+    );
 }
