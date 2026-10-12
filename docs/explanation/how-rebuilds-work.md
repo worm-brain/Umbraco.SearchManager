@@ -48,8 +48,9 @@ The two engines rebuild differently, and the confirmation says which applies to 
   new copy comes out empty or unhealthy, Umbraco Search keeps the current one, and Search Manager
   reports the run as failed so you know the index did not change.
 
-That last rule means an Umbraco Search index with nothing to index, such as `Umb_Members` on a
-site without members, always reports a failed rebuild. Search is unaffected.
+The exception is an index with nothing to index, such as `Umb_Members` on a site without
+members. The new copy is empty, but so is the current one, so nothing changed: the run succeeds
+and the Rebuilds panel says **nothing to index**.
 
 ## Progress estimates
 

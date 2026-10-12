@@ -56,12 +56,10 @@ The short names differ from the core indexes: `type`, `kind`, `name`, `updated`,
 ## The box on Umbraco Search's index page
 
 Umbraco Search's own index page, under **Settings > Search**, gets a **Search Manager** box with
-the last rebuild, the runs before it and the field count. Its buttons open **Explore**,
-**Field statistics** and **History** for that index in Search Manager.
+the last rebuild, the runs before it and the field count. Its buttons open **Explore** and
+**History** for that index in Search Manager.
 
 ![Umbraco Search's page for Umb_PublishedContent, with the Search Manager box under Index Information](../images/umbraco-search-box.png)
-
-**Field statistics** opens the **Diagnose** tab, which is a placeholder in this version.
 
 ## Related
 

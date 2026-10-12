@@ -84,8 +84,7 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 
 ### Coming next
 
-- **Diagnose:** field statistics, analyzers and where a page is indexed. The tab is there today
-  as a placeholder.
+- **Diagnose:** field statistics, analyzers and where a page is indexed.
 
 ## A quick tour
 

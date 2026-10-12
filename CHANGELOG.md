@@ -6,9 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [18.0.0] - 2026-10-12
+
+The first release for Umbraco 18, with the same features as 17.0.0.
+
+## [17.0.0] - 2026-10-12
+
+The first release, for Umbraco 17.
+
 ### Added
 
-- Settings > Advanced > Search Manager: a workspace with Indexes, Explore and Diagnose views.
+- Settings > Advanced > Search Manager: a workspace with Indexes and Explore views.
 - The Indexes view lists every Examine index with its health, documents, deleted documents,
   fields and size on disk. A corrupt index is listed with its error instead of breaking the page,
   and member indexes need Members section access.
@@ -60,11 +68,14 @@ All notable changes to this project are documented here. The format follows
   reason and not sent. Results show name, icon, document type, object type and culture; the
   drawer shows the stored fields when the index uses the Examine provider. Show query shows the
   `SearchAsync` call in C#.
-- Explore and Diagnose open on the index a link names with `?index=`.
+- Explore opens on the index a link names with `?index=`.
 - The core Examine Management dashboard (and its field modals) is hidden, so Settings has one
   place for indexes. Set `SearchManager:HideCoreExamineDashboard` to `false` to keep it; see
   `docs/reference/configuration.md`.
 - Explore results show the document type's icon.
 - A Search Manager box on Umbraco Search's index page (with the adapter package): the last
-  rebuild, the runs before it and the field count, with links to Explore, field statistics and
-  the index's history in Search Manager.
+  rebuild, the runs before it and the field count, with links to Explore and the index's history
+  in Search Manager.
+- An Umbraco Search rebuild with nothing to index (such as `Umb_Members` on a site without
+  members) succeeds and says "nothing to index", rather than failing because Umbraco Search kept
+  its empty current copy.

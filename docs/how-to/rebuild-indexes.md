@@ -39,6 +39,7 @@ The **Rebuilds** panel opens above the table and updates live from the server:
 | **About 1,200 of 2,400 documents (50%), estimated from the last run** | Running. The estimate compares the documents written so far with the previous successful run. |
 | **Building a fresh copy. Search keeps using the current one.** | A zero-downtime rebuild is running. |
 | **Done in 4 s, 189 documents** | Finished, and the index is searchable. |
+| **Done in 30 s, nothing to index** | Finished, and there was nothing to put in the index, such as `Umb_Members` on a site without members. |
 | **Failed after 30 s: ...** | Stopped, with the error. |
 | **Cancelled before it started** | You cancelled it while it was queued. |
 
@@ -63,10 +64,10 @@ for example by the core dashboard or at startup, are not recorded.
 
 ## Troubleshooting
 
-- **An Umbraco Search index with no content fails after 30 seconds.** With zero downtime, Umbraco
-  Search keeps the current copy when the new one comes out empty, and the run is reported as
-  failed with that reason. On a site without media or members, `Umb_Media` and `Umb_Members`
-  behave this way. Search keeps working with the old copy.
+- **An Umbraco Search rebuild failed with "kept the current copy".** With zero downtime, Umbraco
+  Search keeps the current copy when the new one comes out empty or unhealthy, so search still
+  uses the old data. Check the log for the reason. An index with nothing to index at all, such as
+  `Umb_Members` on a site without members, is not a failure: it shows **nothing to index**.
 - **A rebuild only changed one server.** Core Examine indexes are stored per server. See
   [Load-balanced sites](../explanation/how-rebuilds-work.md#load-balanced-sites).
 - **The site restarted during a rebuild.** The queue lives in memory, so queued runs are lost and
