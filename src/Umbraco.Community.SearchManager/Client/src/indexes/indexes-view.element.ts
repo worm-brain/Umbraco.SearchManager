@@ -4,6 +4,7 @@ import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import { IndexesService } from "../api/sdk.gen.js";
 import type { IndexSummary } from "../api/types.gen.js";
 import { describeError } from "../shared/describe-error.js";
+import { engineOptions, filterByEngine, type EngineFilter } from "./engine-filter.js";
 import { engineLabel, formatBytes, formatCount, healthLook } from "./index-format.js";
 
 /**
@@ -31,6 +32,10 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
   /** A message for the last failed load, shown as text. */
   @state()
   private _error?: string;
+
+  /** The engine filter: every engine, or one engine id. */
+  @state()
+  private _engine: EngineFilter = "all";
 
   /** Loads the indexes as soon as the view is in the page. */
   override connectedCallback(): void {
@@ -61,6 +66,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
       <uui-box>
         <div slot="header" class="toolbar">
           <span>${this.localize.term("searchManager_indexesCount", this._indexes.length)}</span>
+          ${this.#renderEngineFilter()}
           <uui-button
             look="secondary"
             label=${this.localize.term("searchManager_reload")}
@@ -75,6 +81,35 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         }
         ${this.#renderTable()}
       </uui-box>
+    `;
+  }
+
+  /**
+   * Renders the engine filter (All, Examine, Umbraco Search, ...), with each button's count. It is
+   * left out when every index comes from one engine, since it could only ever show "all".
+   *
+   * @returns The template, or nothing.
+   */
+  #renderEngineFilter() {
+    const options = engineOptions(this._indexes);
+    if (options.length <= 2) return nothing;
+    return html`
+      <uui-button-group role="group" aria-label=${this.localize.term("searchManager_engineFilterLabel")}>
+        ${options.map(
+          (option) => html`
+            <uui-button
+              look=${this._engine === option.value ? "primary" : "secondary"}
+              aria-pressed=${this._engine === option.value ? "true" : "false"}
+              label=${
+                option.value === "all"
+                  ? this.localize.term("searchManager_engineAll", option.count)
+                  : this.localize.term("searchManager_engineOption", engineLabel(option.value), option.count)
+              }
+              @click=${() => (this._engine = option.value)}
+            ></uui-button>
+          `,
+        )}
+      </uui-button-group>
     `;
   }
 
@@ -99,7 +134,7 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
           <uui-table-head-cell class="number">${this.localize.term("searchManager_columnFields")}</uui-table-head-cell>
           <uui-table-head-cell class="number">${this.localize.term("searchManager_columnSize")}</uui-table-head-cell>
         </uui-table-head>
-        ${this._indexes.map((index) => this.#renderRow(index))}
+        ${filterByEngine(this._indexes, this._engine).map((index) => this.#renderRow(index))}
       </uui-table>
     `;
   }
@@ -155,10 +190,15 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
 
       .toolbar {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        justify-content: space-between;
         gap: var(--uui-size-space-4);
         width: 100%;
+      }
+
+      /* Reload sits at the far end of the toolbar. */
+      .toolbar > uui-button:last-child {
+        margin-left: auto;
       }
 
       .name {

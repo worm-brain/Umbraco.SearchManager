@@ -40,10 +40,8 @@
 
   <ItemGroup Label="Umbraco Search">
     <PackageVersion Include="Umbraco.Cms.Search.Core" Version="$(UmbracoSearchRange)" />
-    <PackageVersion
-      Include="Umbraco.Cms.Search.Provider.Examine"
-      Version="$(UmbracoSearchDevVersion)"
-    />
+    <!-- A range: the adapter reads the Examine provider's active physical index (ADR 0010). -->
+    <PackageVersion Include="Umbraco.Cms.Search.Provider.Examine" Version="$(UmbracoSearchRange)" />
     <PackageVersion Include="Umbraco.Cms.Search.BackOffice" Version="$(UmbracoSearchDevVersion)" />
   </ItemGroup>
 

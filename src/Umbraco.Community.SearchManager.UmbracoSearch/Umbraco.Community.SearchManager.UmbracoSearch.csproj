@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <!--
+    The Umbraco Search adapter: lists (and rebuilds) Umbraco Search indexes in Search Manager.
+    A separate package because Umbraco Search brings Examine 4; the main package must never
+    reference it, or every site would be upgraded.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Umbraco.Community.SearchManager.UmbracoSearch</RootNamespace>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <!-- Transitive packages resolve at the floor here; consuming sites resolve (and audit) their own. -->
+    <NuGetAuditMode>direct</NuGetAuditMode>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Umbraco.Community.SearchManager.UmbracoSearch</PackageId>
+    <Product>Umbraco.Community.SearchManager.UmbracoSearch</Product>
+    <Title>Umbraco Search Manager: Umbraco Search adapter</Title>
+    <Description>Adds Umbraco Search indexes to Umbraco Search Manager. Install it on sites that use Umbraco Search.</Description>
+    <PackageTags>umbraco;umbraco-marketplace;search;examine;umbraco-search</PackageTags>
+    <Version>$(UmbracoMajor).0.0-dev</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Range per major (17.2.0 / 18.2.0 floor). -->
+    <PackageReference Include="Umbraco.Cms.Search.Core" />
+    <!-- Reads the active physical index (IActiveIndexManager); resolved optionally at runtime (ADR 0010). -->
+    <PackageReference Include="Umbraco.Cms.Search.Provider.Examine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Umbraco.Community.SearchManager\Umbraco.Community.SearchManager.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Umbraco.Community.SearchManager.UmbracoSearch.Tests" />
+  </ItemGroup>
+</Project>

@@ -5,10 +5,11 @@ namespace Umbraco.Community.SearchManager.Features.Indexes;
 
 /// <summary>
 /// Statistics read straight from a Lucene index that Umbraco's diagnostics do not report.
+/// Public so source packages (the Umbraco Search adapter) read their physical indexes the same way.
 /// </summary>
 /// <param name="DeletedDocumentCount">Documents marked deleted but not yet merged away.</param>
 /// <param name="SizeInBytes">Total size of the index's files.</param>
-internal sealed record LuceneIndexStatistics(long? DeletedDocumentCount, long? SizeInBytes)
+public sealed record LuceneIndexStatistics(long? DeletedDocumentCount, long? SizeInBytes)
 {
     /// <summary>
     /// Reads the statistics, or returns null when the index cannot be read (it is being written,

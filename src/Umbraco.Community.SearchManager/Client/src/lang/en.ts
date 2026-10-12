@@ -39,5 +39,10 @@ export default {
     healthEmpty: "Empty",
     healthIncomplete: "Incomplete",
     healthUnknown: "Unknown",
+
+    // Engine filter (Umbraco Search adapter).
+    engineFilterLabel: "Engine",
+    engineAll: (count: number) => `All engines (${count})`,
+    engineOption: (engine: string, count: number) => `${engine} (${count})`,
   },
 } satisfies UmbLocalizationDictionary;

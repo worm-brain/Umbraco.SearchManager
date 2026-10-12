@@ -12,3 +12,9 @@ All notable changes to this project are documented here. The format follows
 - The Indexes view lists every Examine index with its health, documents, deleted documents,
   fields and size on disk. A corrupt index is listed with its error instead of breaking the page,
   and member indexes need Members section access.
+- `Umbraco.Community.SearchManager.UmbracoSearch`: an adapter package that lists Umbraco Search
+  indexes beside the Examine indexes, with Umbraco Search's health and document count, a
+  "Zero downtime" badge, and fields, deleted documents and size on disk from the Examine
+  provider's active physical index. Their physical `Umb_*` indexes are no longer listed twice.
+- An engine filter (All, Examine, Umbraco Search) on the Indexes view when more than one engine
+  is installed.
