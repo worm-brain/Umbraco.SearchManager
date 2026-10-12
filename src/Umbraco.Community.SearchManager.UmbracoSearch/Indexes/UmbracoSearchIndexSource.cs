@@ -256,7 +256,9 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
 
     /// <summary>
     /// Waits for the Examine provider to finish a zero-downtime rebuild, and fails when it kept
-    /// the old copy (it does so when the new copy is empty or unhealthy).
+    /// the old copy (it does so when the new copy is empty or unhealthy). An index with nothing to
+    /// index is the exception: the new copy is empty, the provider keeps the old one, which is
+    /// empty too, so nothing changed and the run succeeds (with 0 documents) instead of failing.
     /// </summary>
     /// <param name="alias">The alias.</param>
     /// <param name="activeBefore">The physical index that was active before the rebuild.</param>
@@ -274,14 +276,19 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
             await Task.Delay(DocumentCountPoller.Interval, _timeProvider, cancellationToken);
         }
 
-        if (
-            string.Equals(
-                _activeIndexManager.ResolveActiveIndexName(alias),
-                activeBefore,
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
+        string activeAfter = _activeIndexManager.ResolveActiveIndexName(alias);
+        if (string.Equals(activeAfter, activeBefore, StringComparison.OrdinalIgnoreCase))
         {
+            // Nothing to index, such as Umb_Members on a site without members: the kept copy is
+            // empty and so is the new one, so search sees exactly what a swap would have given.
+            if (
+                ReadCount(activeAfter) == 0
+                && ReadCount(_activeIndexManager.ResolveShadowIndexName(alias)) is null or 0
+            )
+            {
+                return;
+            }
+
             throw new InvalidOperationException(
                 "Umbraco Search kept the current copy because the new copy was empty or unhealthy, so search still uses the old data."
             );
@@ -315,11 +322,18 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     /// <param name="alias">The alias.</param>
     /// <param name="zeroDowntime">Whether zero-downtime indexing is on.</param>
     /// <returns>The count, or null when unknown.</returns>
-    private long? ReadWriteTargetCount(string alias, bool zeroDowntime)
+    private long? ReadWriteTargetCount(string alias, bool zeroDowntime) =>
+        ReadCount(
+            zeroDowntime
+                ? _activeIndexManager!.ResolveShadowIndexName(alias)
+                : _activeIndexManager!.ResolveActiveIndexName(alias)
+        );
+
+    /// <summary>Reads the document count of one physical Examine index.</summary>
+    /// <param name="name">The physical index name.</param>
+    /// <returns>The count, or null when the index is missing or cannot say.</returns>
+    private long? ReadCount(string name)
     {
-        string name = zeroDowntime
-            ? _activeIndexManager!.ResolveShadowIndexName(alias)
-            : _activeIndexManager!.ResolveActiveIndexName(alias);
         if (!_examineManager.TryGetIndex(name, out IIndex? index))
         {
             return null;

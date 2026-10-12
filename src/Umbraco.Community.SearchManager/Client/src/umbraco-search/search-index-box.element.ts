@@ -109,12 +109,6 @@ export class SearchManagerSearchIndexBoxElement extends UmbLitElement {
           <uui-button
             look="secondary"
             compact
-            href=${searchManagerViewPath("diagnose", alias)}
-            label=${this.localize.term("searchManager_boxFieldStatistics")}
-          ></uui-button>
-          <uui-button
-            look="secondary"
-            compact
             href=${searchManagerViewPath("indexes", alias)}
             label=${this.localize.term("searchManager_boxHistory")}
           ></uui-button>

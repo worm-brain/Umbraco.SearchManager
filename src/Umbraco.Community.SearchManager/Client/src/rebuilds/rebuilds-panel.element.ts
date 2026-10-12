@@ -3,7 +3,7 @@ import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import type { RebuildRun } from "../api/types.gen.js";
 import { formatCount } from "../indexes/index-format.js";
-import { estimatePercent, formatDuration, waitPosition } from "./rebuild-model.js";
+import { estimatePercent, finishedEmpty, formatDuration, waitPosition } from "./rebuild-model.js";
 
 /** How each run status is drawn: an icon and a colour token, always beside text. */
 const STATUS_LOOK: Record<RebuildRun["status"], { icon: string; color: string }> = {
@@ -126,6 +126,12 @@ export class SearchManagerRebuildsPanelElement extends UmbLitElement {
               percent,
             );
       case "Succeeded":
+        // An index with nothing to index (no members, no media) is a normal outcome; say so.
+        if (finishedEmpty(run))
+          return this.localize.term(
+            "searchManager_rebuildsSucceededEmpty",
+            formatDuration(run.startedAt ?? run.queuedAt, run.endedAt),
+          );
         return this.localize.term(
           "searchManager_rebuildsSucceeded",
           formatDuration(run.startedAt ?? run.queuedAt, run.endedAt),

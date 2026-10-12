@@ -297,6 +297,46 @@ public class UmbracoSearchIndexSourceTests
     }
 
     [Fact]
+    public async Task RebuildAsync_ZeroDowntimeNothingToIndex_CompletesAlthoughTheEmptyCopyWasKept()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Members", UmbracoObjectTypes.Member);
+        _activeIndexManager.ResolveActiveIndexName("Umb_Members").Returns("Umb_Members_a");
+        _activeIndexManager.ResolveShadowIndexName("Umb_Members").Returns("Umb_Members_b");
+        PhysicalIndex("Umb_Members_a", fields: [], documents: 0);
+        PhysicalIndex("Umb_Members_b", fields: [], documents: 0);
+        RebuildAnnounces("Umb_Members");
+
+        // Act
+        Task rebuild = RebuildAsync("Umb_Members", zeroDowntime: true);
+        await rebuild;
+
+        // Assert
+        Assert.True(rebuild.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_ZeroDowntimeKeptCopyHasDocuments_ThrowsBecauseTheOldCopyWasKept()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Media", UmbracoObjectTypes.Media);
+        _activeIndexManager.ResolveActiveIndexName("Umb_Media").Returns("Umb_Media_a");
+        _activeIndexManager.ResolveShadowIndexName("Umb_Media").Returns("Umb_Media_b");
+        PhysicalIndex("Umb_Media_a", fields: [], documents: 12);
+        PhysicalIndex("Umb_Media_b", fields: [], documents: 0);
+        RebuildAnnounces("Umb_Media");
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("Umb_Media", zeroDowntime: true)
+        );
+
+        // Assert
+        Assert.Contains("kept the current copy", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RebuildAsync_ZeroDowntimeCopySwappedIn_Completes()
     {
         // Arrange
@@ -365,7 +405,7 @@ public class UmbracoSearchIndexSourceTests
         _resolver.GetIndexer(alias).Returns(indexer);
     }
 
-    private void PhysicalIndex(string name, string[] fields)
+    private void PhysicalIndex(string name, string[] fields, long documents = 0)
     {
         IIndex index = Substitute.For<IIndex>();
         index.Name.Returns(name);
@@ -380,6 +420,7 @@ public class UmbracoSearchIndexSourceTests
         IIndexDiagnostics diagnostics = Substitute.For<IIndexDiagnostics>();
         diagnostics.IsHealthy().Returns(Attempt<string?>.Succeed());
         diagnostics.GetFieldNames().Returns(fields);
+        diagnostics.GetDocumentCount().Returns(documents);
         diagnostics.Metadata.Returns(new Dictionary<string, object?>());
         _diagnosticsFactory.Create(index).Returns(diagnostics);
     }

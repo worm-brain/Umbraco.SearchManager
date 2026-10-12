@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { IndexSummary, RebuildRun } from "../api/types.gen.js";
 import {
   estimatePercent,
+  finishedEmpty,
   formatDuration,
   hasActiveRuns,
   latestRunByIndex,
@@ -81,6 +82,20 @@ describe("estimatePercent", () => {
 
   it("has no estimate without a previous count", () => {
     expect(estimatePercent(run({ status: "Running", documentsWritten: 10, estimatedTotal: 0 }))).toBeNull();
+  });
+});
+
+describe("finishedEmpty", () => {
+  it("is true for a successful run that left the index empty", () => {
+    expect(finishedEmpty(run({ status: "Succeeded", documentsAfter: 0 }))).toBe(true);
+  });
+
+  it("is false when the index holds documents, or the count is unknown", () => {
+    expect([
+      finishedEmpty(run({ status: "Succeeded", documentsAfter: 189 })),
+      finishedEmpty(run({ status: "Succeeded", documentsAfter: null })),
+      finishedEmpty(run({ status: "Failed", documentsAfter: 0 })),
+    ]).toEqual([false, false, false]);
   });
 });
 

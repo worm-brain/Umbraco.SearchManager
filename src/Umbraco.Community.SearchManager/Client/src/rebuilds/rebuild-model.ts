@@ -73,6 +73,17 @@ export function estimatePercent(run: RebuildRun): number | null {
 }
 
 /**
+ * Whether a run finished with nothing to index, such as a member index on a site without
+ * members. The panel says so instead of "0 documents", so an empty result reads as expected.
+ *
+ * @param run - The run.
+ * @returns True when the run succeeded and the index holds no documents.
+ */
+export function finishedEmpty(run: RebuildRun): boolean {
+  return run.status === "Succeeded" && run.documentsAfter === 0;
+}
+
+/**
  * Where a queued one-at-a-time run is in line (1 = next). All-at-once runs start at once, so they
  * have no position.
  *

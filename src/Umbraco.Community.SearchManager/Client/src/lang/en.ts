@@ -226,6 +226,7 @@ export default {
         ? "Building a fresh copy. Search keeps using the current one."
         : `Building a fresh copy. Search keeps using the current one. About ${percent}%, estimated`,
     rebuildsSucceeded: (duration: string, documents: string) => `Done in ${duration}, ${documents} documents`,
+    rebuildsSucceededEmpty: (duration: string) => `Done in ${duration}, nothing to index`,
     rebuildsFailed: (duration: string, error: string) => `Failed after ${duration}: ${error}`,
     rebuildsCancelled: "Cancelled before it started",
 

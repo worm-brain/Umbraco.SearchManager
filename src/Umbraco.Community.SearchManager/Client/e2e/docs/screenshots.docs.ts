@@ -30,11 +30,6 @@ async function openCleanIndexes(page: Page, index: string): Promise<void> {
   }
 }
 
-test("indexes", async ({ page }) => {
-  await openCleanIndexes(page, "Umb_PublishedContent");
-  await shoot(page, "indexes");
-});
-
 test("rebuild confirmation", async ({ page }) => {
   await openCleanIndexes(page, "Umb_PublishedContent");
   await selectBox(page, "ExternalIndex").click();
@@ -47,21 +42,21 @@ test("rebuild confirmation", async ({ page }) => {
 test("rebuilds panel and history", async ({ page }) => {
   test.setTimeout(300_000);
   await openCleanIndexes(page, "ProductIndex");
-  for (const index of ["ProductIndex", "InternalIndex", "MembersIndex"]) {
+  // Umb_Media and Umb_Members are empty on the sample site, so the panel shows "nothing to index",
+  // and the indexes shot that follows shows them succeeded.
+  for (const index of ["ProductIndex", "InternalIndex", "Umb_Media", "Umb_Members"]) {
     await selectBox(page, index).click();
   }
-  await page.getByRole("button", { name: "Rebuild 3 indexes" }).first().click();
+  await page.getByRole("button", { name: "Rebuild 4 indexes" }).first().click();
   await page.locator("uui-dialog-layout uui-button[look=primary]").click();
 
   const panel = page.locator("search-manager-rebuilds-panel");
   await expect(
     panel
       .locator("li")
-      .filter({ hasText: "MembersIndex" })
+      .filter({ hasText: "Umb_Members" })
       .getByText(/Done in/),
-  ).toBeVisible({
-    timeout: 240_000,
-  });
+  ).toBeVisible({ timeout: 240_000 });
   await shoot(page, "rebuilds");
 
   await page.getByRole("button", { name: "Details and history for ProductIndex" }).click();
@@ -69,6 +64,11 @@ test("rebuilds panel and history", async ({ page }) => {
     page.locator("uui-box").filter({ hasText: "Rebuild history" }).getByText("Succeeded").first(),
   ).toBeVisible();
   await shoot(page, "index-details");
+});
+
+test("indexes", async ({ page }) => {
+  await openCleanIndexes(page, "Umb_PublishedContent");
+  await shoot(page, "indexes");
 });
 
 test("explore with chips and the fields panel", async ({ page }) => {
