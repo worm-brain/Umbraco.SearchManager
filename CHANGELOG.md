@@ -18,3 +18,8 @@ All notable changes to this project are documented here. The format follows
   provider's active physical index. Their physical `Umb_*` indexes are no longer listed twice.
 - An engine filter (All, Examine, Umbraco Search) on the Indexes view when more than one engine
   is installed.
+- Bulk rebuilds: tick indexes (or "Rebuild all"), confirm what happens to live search for each,
+  and choose one at a time or all at once. Rebuilds run in a queue on the server and keep running
+  when the browser leaves; queued runs can be cancelled. The Rebuilds panel shows queued, running
+  (with an estimated percentage), succeeded, failed (with the error) and cancelled runs. A core
+  Examine run is marked done only once Lucene has committed.

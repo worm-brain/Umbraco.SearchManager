@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetIndexesData, GetIndexesErrors, GetIndexesResponses } from './types.gen';
+import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -23,6 +23,44 @@ export class IndexesService {
         return (options?.client ?? client).get<GetIndexesResponses, GetIndexesErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/indexes',
+            ...options
+        });
+    }
+}
+
+export class RebuildsService {
+    public static getRebuilds<ThrowOnError extends boolean = false>(options?: Options<GetRebuildsData, ThrowOnError>): RequestResult<GetRebuildsResponses, GetRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetRebuildsResponses, GetRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds',
+            ...options
+        });
+    }
+    
+    public static queueRebuilds<ThrowOnError extends boolean = false>(options?: Options<QueueRebuildsData, ThrowOnError>): RequestResult<QueueRebuildsResponses, QueueRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).post<QueueRebuildsResponses, QueueRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
+            }
+        });
+    }
+    
+    public static cancelRebuild<ThrowOnError extends boolean = false>(options: Options<CancelRebuildData, ThrowOnError>): RequestResult<CancelRebuildResponses, CancelRebuildErrors, ThrowOnError> {
+        return (options.client ?? client).post<CancelRebuildResponses, CancelRebuildErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/{id}/cancel',
+            ...options
+        });
+    }
+    
+    public static clearFinishedRebuilds<ThrowOnError extends boolean = false>(options?: Options<ClearFinishedRebuildsData, ThrowOnError>): RequestResult<ClearFinishedRebuildsResponses, ClearFinishedRebuildsErrors, ThrowOnError> {
+        return (options?.client ?? client).delete<ClearFinishedRebuildsResponses, ClearFinishedRebuildsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/rebuilds/finished',
             ...options
         });
     }

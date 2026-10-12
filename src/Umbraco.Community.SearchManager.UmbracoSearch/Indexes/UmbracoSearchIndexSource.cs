@@ -14,6 +14,7 @@ using Umbraco.Cms.Search.Provider.Examine.Configuration;
 using Umbraco.Cms.Search.Provider.Examine.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds;
 using IndexOptions = Umbraco.Cms.Search.Core.Configuration.IndexOptions;
 
 namespace Umbraco.Community.SearchManager.UmbracoSearch.Indexes;
@@ -46,6 +47,22 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     private readonly IActiveIndexManager? _activeIndexManager;
     private readonly bool _zeroDowntimeSetting;
     private readonly ILogger<UmbracoSearchIndexSource> _logger;
+    private readonly UmbracoSearchRebuildTracker _tracker;
+    private readonly TimeProvider _timeProvider;
+    private readonly IDistributedContentIndexRebuilder? _rebuilder;
+    private readonly IIndexCommitMonitor? _commitMonitor;
+
+    /// <summary>How long Umbraco Search may take to start a rebuild on this server.</summary>
+    internal static readonly TimeSpan StartTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// How long a rebuild may go without its document count changing before it is taken to have
+    /// failed (Umbraco Search logs a failure but announces nothing).
+    /// </summary>
+    internal static readonly TimeSpan StallTimeout = TimeSpan.FromMinutes(10);
+
+    /// <summary>How long the Examine provider may take to swap in a zero-downtime copy.</summary>
+    internal static readonly TimeSpan SwapTimeout = TimeSpan.FromMinutes(2);
 
     /// <summary>Creates the source.</summary>
     /// <param name="indexOptions">Umbraco Search's index registrations.</param>
@@ -53,6 +70,8 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     /// <param name="diagnosticsFactory">Reads a physical index's fields and provider properties.</param>
     /// <param name="providerSettings">The Examine provider's settings (zero-downtime indexing).</param>
     /// <param name="logger">Logs indexes that cannot be read.</param>
+    /// <param name="tracker">Turns Umbraco Search's rebuild notifications into tasks.</param>
+    /// <param name="timeProvider">Drives the rebuild timeouts and progress polling.</param>
     /// <param name="indexerResolver">
     /// Umbraco Search's indexer resolver; null when the site has not called <c>AddSearchCore()</c>,
     /// in which case the source lists nothing.
@@ -60,14 +79,20 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
     /// <param name="activeIndexManager">
     /// The Examine provider's slot manager; null when the site does not use the Examine provider.
     /// </param>
+    /// <param name="rebuilder">Umbraco Search's distributed rebuilder; null without <c>AddSearchCore()</c>.</param>
+    /// <param name="commitMonitor">The Examine provider's commit monitor; null without the provider.</param>
     public UmbracoSearchIndexSource(
         IOptions<IndexOptions> indexOptions,
         IExamineManager examineManager,
         IIndexDiagnosticsFactory diagnosticsFactory,
         IOptions<ExamineSearchProviderSettings> providerSettings,
         ILogger<UmbracoSearchIndexSource> logger,
+        UmbracoSearchRebuildTracker tracker,
+        TimeProvider timeProvider,
         IIndexerResolver? indexerResolver = null,
-        IActiveIndexManager? activeIndexManager = null
+        IActiveIndexManager? activeIndexManager = null,
+        IDistributedContentIndexRebuilder? rebuilder = null,
+        IIndexCommitMonitor? commitMonitor = null
     )
     {
         ArgumentNullException.ThrowIfNull(indexOptions);
@@ -82,6 +107,10 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
         _activeIndexManager = activeIndexManager;
         _zeroDowntimeSetting = providerSettings.Value.ZeroDowntimeIndexing;
         _logger = logger;
+        _tracker = tracker;
+        _timeProvider = timeProvider;
+        _rebuilder = rebuilder;
+        _commitMonitor = commitMonitor;
 
         ClaimedExamineIndexNames = new HashSet<string>(
             _registrations
@@ -120,6 +149,207 @@ internal sealed class UmbracoSearchIndexSource : IIndexSource
         }
 
         return result;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Asks <see cref="IDistributedContentIndexRebuilder"/> to rebuild (on every server), then waits
+    /// for Umbraco Search's notifications on this server. Umbraco Search announces no failure, so
+    /// a rebuild that does not start within <see cref="StartTimeout"/>, or whose document count
+    /// stands still for <see cref="StallTimeout"/>, is reported as failed. With the Examine
+    /// provider the run is done only once the new data is committed: with zero-downtime indexing
+    /// once the provider has swapped the new copy in (which it does after the commit), otherwise
+    /// once the physical index has committed.
+    /// </remarks>
+    public async Task RebuildAsync(
+        string indexName,
+        IProgress<long> documentsWritten,
+        CancellationToken cancellationToken
+    )
+    {
+        ContentIndexRegistration registration =
+            _registrations.FirstOrDefault(candidate =>
+                string.Equals(candidate.IndexAlias, indexName, StringComparison.OrdinalIgnoreCase)
+            )
+            ?? throw new InvalidOperationException(
+                $"Umbraco Search has no index called {indexName}."
+            );
+        if (_rebuilder is null)
+        {
+            throw new InvalidOperationException("Umbraco Search is not set up on this site.");
+        }
+
+        string alias = registration.IndexAlias;
+        bool examineBacked = IsExamineBacked(registration) && _activeIndexManager is not null;
+        bool zeroDowntime = examineBacked && _zeroDowntimeSetting;
+        string? activeBefore = examineBacked
+            ? _activeIndexManager!.ResolveActiveIndexName(alias)
+            : null;
+
+        using UmbracoSearchRebuildTracker.RebuildWatch watch = _tracker.Watch(alias);
+        using var stopPolling = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        long? lastCount = null;
+        var progress = new Progress(count =>
+        {
+            lastCount = count;
+            documentsWritten.Report(count);
+        });
+        Task polling = examineBacked
+            ? DocumentCountPoller.StartAsync(
+                () => ReadWriteTargetCount(alias, zeroDowntime),
+                progress,
+                _timeProvider,
+                stopPolling.Token
+            )
+            : Task.CompletedTask;
+
+        try
+        {
+            if (!_rebuilder.Rebuild(alias))
+            {
+                throw new InvalidOperationException(
+                    "Umbraco Search refused to rebuild this index. Check the log."
+                );
+            }
+
+            if (!await CompletesWithinAsync(watch.Started, StartTimeout, cancellationToken))
+            {
+                throw new InvalidOperationException(
+                    "Umbraco Search did not start the rebuild on this server within 2 minutes. Check the log."
+                );
+            }
+
+            // Wait for completion, failing only when the count has stood still for a whole stall
+            // period (a failed Umbraco Search rebuild is logged, never announced).
+            long? countAtLastCheck = lastCount;
+            while (!await CompletesWithinAsync(watch.Completed, StallTimeout, cancellationToken))
+            {
+                if (lastCount == countAtLastCheck)
+                {
+                    throw new InvalidOperationException(
+                        "Umbraco Search stopped making progress for 10 minutes, so the rebuild probably failed. Check the log."
+                    );
+                }
+
+                countAtLastCheck = lastCount;
+            }
+
+            if (zeroDowntime)
+            {
+                await WaitForSwapAsync(alias, activeBefore!, cancellationToken);
+            }
+            else if (examineBacked)
+            {
+                await WaitForCommitAsync(activeBefore!, cancellationToken);
+            }
+        }
+        finally
+        {
+            await stopPolling.CancelAsync();
+            await polling;
+        }
+    }
+
+    /// <summary>
+    /// Waits for the Examine provider to finish a zero-downtime rebuild, and fails when it kept
+    /// the old copy (it does so when the new copy is empty or unhealthy).
+    /// </summary>
+    /// <param name="alias">The alias.</param>
+    /// <param name="activeBefore">The physical index that was active before the rebuild.</param>
+    /// <param name="cancellationToken">Stops waiting.</param>
+    /// <returns>A task that completes once the new copy is active.</returns>
+    private async Task WaitForSwapAsync(
+        string alias,
+        string activeBefore,
+        CancellationToken cancellationToken
+    )
+    {
+        DateTimeOffset deadline = _timeProvider.GetUtcNow() + SwapTimeout;
+        while (_activeIndexManager!.IsRebuilding(alias) && _timeProvider.GetUtcNow() < deadline)
+        {
+            await Task.Delay(DocumentCountPoller.Interval, _timeProvider, cancellationToken);
+        }
+
+        if (
+            string.Equals(
+                _activeIndexManager.ResolveActiveIndexName(alias),
+                activeBefore,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            throw new InvalidOperationException(
+                "Umbraco Search kept the current copy because the new copy was empty or unhealthy, so search still uses the old data."
+            );
+        }
+    }
+
+    /// <summary>Waits until the physical index has committed and its searcher sees the new data.</summary>
+    /// <param name="physicalIndexName">The physical index.</param>
+    /// <param name="cancellationToken">Stops waiting.</param>
+    /// <returns>A task that completes once committed (or the provider's own timeout passes).</returns>
+    private async Task WaitForCommitAsync(
+        string physicalIndexName,
+        CancellationToken cancellationToken
+    )
+    {
+        if (_commitMonitor is not null)
+        {
+            await _commitMonitor.WaitForCommitAsync(physicalIndexName, cancellationToken);
+        }
+
+        if (_examineManager.TryGetIndex(physicalIndexName, out IIndex? index))
+        {
+            (index as LuceneIndex)?.WaitForChanges();
+        }
+    }
+
+    /// <summary>
+    /// Reads the document count of the physical index being written: the standby copy with
+    /// zero-downtime indexing, otherwise the index itself.
+    /// </summary>
+    /// <param name="alias">The alias.</param>
+    /// <param name="zeroDowntime">Whether zero-downtime indexing is on.</param>
+    /// <returns>The count, or null when unknown.</returns>
+    private long? ReadWriteTargetCount(string alias, bool zeroDowntime)
+    {
+        string name = zeroDowntime
+            ? _activeIndexManager!.ResolveShadowIndexName(alias)
+            : _activeIndexManager!.ResolveActiveIndexName(alias);
+        if (!_examineManager.TryGetIndex(name, out IIndex? index))
+        {
+            return null;
+        }
+
+        long count = _diagnosticsFactory.Create(index).GetDocumentCount();
+        return count < 0 ? null : count;
+    }
+
+    /// <summary>Waits for <paramref name="task"/> for at most <paramref name="timeout"/>.</summary>
+    /// <param name="task">The task.</param>
+    /// <param name="timeout">How long to wait.</param>
+    /// <param name="cancellationToken">Stops waiting.</param>
+    /// <returns>Whether the task completed in time.</returns>
+    private async Task<bool> CompletesWithinAsync(
+        Task task,
+        TimeSpan timeout,
+        CancellationToken cancellationToken
+    )
+    {
+        using var timer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Task delay = Task.Delay(timeout, _timeProvider, timer.Token);
+        Task first = await Task.WhenAny(task, delay);
+        await timer.CancelAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        return first == task;
+    }
+
+    /// <summary>Calls a callback synchronously for each report.</summary>
+    /// <param name="report">The callback.</param>
+    private sealed class Progress(Action<long> report) : IProgress<long>
+    {
+        /// <inheritdoc />
+        public void Report(long value) => report(value);
     }
 
     /// <summary>Whether the registration's indexer is the Examine provider, so a physical Lucene index backs it.</summary>

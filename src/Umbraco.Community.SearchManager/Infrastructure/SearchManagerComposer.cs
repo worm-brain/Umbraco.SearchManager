@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Community.SearchManager.Core.Indexes;
+using Umbraco.Community.SearchManager.Core.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds;
 
 namespace Umbraco.Community.SearchManager.Infrastructure;
 
@@ -22,5 +25,11 @@ public sealed class SearchManagerComposer : IComposer
         builder.Services.AddSingleton<IIndexSourceRegistry, IndexSourceRegistry>();
         builder.Services.AddSingleton<IIndexSource, ExamineIndexSource>();
         builder.Services.AddScoped<IMemberIndexAccess, MemberIndexAccess>();
+
+        // Rebuild queue: in-memory status, drained by a hosted service on this server.
+        builder.Services.TryAddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<IRebuildQueue, RebuildQueue>();
+        builder.Services.AddSingleton<RebuildRunner>();
+        builder.Services.AddHostedService<RebuildWorker>();
     }
 }

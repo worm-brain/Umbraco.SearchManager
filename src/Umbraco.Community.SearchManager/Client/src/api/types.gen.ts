@@ -4,6 +4,11 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:44380' | (string & {});
 };
 
+export type EnqueueResult = {
+    queued: Array<RebuildRun>;
+    refused: Array<RebuildRefusal>;
+};
+
 export type IndexCapabilities = {
     rebuild: boolean;
     search: boolean;
@@ -32,6 +37,48 @@ export type IndexSummary = {
     };
 };
 
+export type ProblemDetails = {
+    type?: string | null;
+    title?: string | null;
+    status?: number | null;
+    detail?: string | null;
+    instance?: string | null;
+    [key: string]: unknown;
+};
+
+export type QueueRebuildsRequest = {
+    indexNames: Array<string>;
+    mode: RebuildMode;
+};
+
+export type RebuildMode = 'OneAtATime' | 'AllAtOnce';
+
+export type RebuildRefusal = {
+    indexName: string;
+    reason: string;
+};
+
+export type RebuildRun = {
+    id: string;
+    indexName: string;
+    engine: string;
+    mode: RebuildMode;
+    status: RebuildStatus;
+    triggeredBy: string;
+    queuedAt: string;
+    startedAt?: string | null;
+    endedAt?: string | null;
+    documentsBefore?: number | null;
+    documentsAfter?: number | null;
+    documentsWritten?: number | null;
+    estimatedTotal?: number | null;
+    zeroDowntime: boolean;
+    isMemberIndex: boolean;
+    error?: string | null;
+};
+
+export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled';
+
 export type GetIndexesData = {
     body?: never;
     path?: never;
@@ -58,3 +105,119 @@ export type GetIndexesResponses = {
 };
 
 export type GetIndexesResponse = GetIndexesResponses[keyof GetIndexesResponses];
+
+export type GetRebuildsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/rebuilds';
+};
+
+export type GetRebuildsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type GetRebuildsResponses = {
+    /**
+     * OK
+     */
+    200: Array<RebuildRun>;
+};
+
+export type GetRebuildsResponse = GetRebuildsResponses[keyof GetRebuildsResponses];
+
+export type QueueRebuildsData = {
+    body?: QueueRebuildsRequest;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/rebuilds';
+};
+
+export type QueueRebuildsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type QueueRebuildsResponses = {
+    /**
+     * OK
+     */
+    200: EnqueueResult;
+};
+
+export type QueueRebuildsResponse = QueueRebuildsResponses[keyof QueueRebuildsResponses];
+
+export type CancelRebuildData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/rebuilds/{id}/cancel';
+};
+
+export type CancelRebuildErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+};
+
+export type CancelRebuildError = CancelRebuildErrors[keyof CancelRebuildErrors];
+
+export type CancelRebuildResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type ClearFinishedRebuildsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/rebuilds/finished';
+};
+
+export type ClearFinishedRebuildsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type ClearFinishedRebuildsResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};

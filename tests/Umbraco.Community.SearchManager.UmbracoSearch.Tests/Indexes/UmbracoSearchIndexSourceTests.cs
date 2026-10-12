@@ -1,6 +1,7 @@
 using Examine;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Umbraco.Cms.Core;
@@ -26,6 +27,11 @@ public class UmbracoSearchIndexSourceTests
         Substitute.For<IIndexDiagnosticsFactory>();
     private readonly IActiveIndexManager _activeIndexManager =
         Substitute.For<IActiveIndexManager>();
+    private readonly IDistributedContentIndexRebuilder _rebuilder =
+        Substitute.For<IDistributedContentIndexRebuilder>();
+    private readonly IIndexCommitMonitor _commitMonitor = Substitute.For<IIndexCommitMonitor>();
+    private readonly UmbracoSearchRebuildTracker _tracker = new();
+    private readonly FakeTimeProvider _time = new();
 
     public UmbracoSearchIndexSourceTests()
     {
@@ -163,7 +169,9 @@ public class UmbracoSearchIndexSourceTests
             _examineManager,
             _diagnosticsFactory,
             Options.Create(new ExamineSearchProviderSettings()),
-            NullLogger<UmbracoSearchIndexSource>.Instance
+            NullLogger<UmbracoSearchIndexSource>.Instance,
+            _tracker,
+            _time
         );
 
         // Act
@@ -222,6 +230,128 @@ public class UmbracoSearchIndexSourceTests
         Assert.Equal("Content, including unpublished", index.Description);
     }
 
+    [Fact]
+    public async Task RebuildAsync_UmbracoSearchCompletes_Completes()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Content", UmbracoObjectTypes.Document);
+        RebuildAnnounces("Umb_Content");
+
+        // Act
+        Task rebuild = RebuildAsync("Umb_Content");
+        await rebuild;
+
+        // Assert
+        Assert.True(rebuild.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_NotZeroDowntime_WaitsForThePhysicalIndexToCommit()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Content", UmbracoObjectTypes.Document);
+        RebuildAnnounces("Umb_Content");
+
+        // Act
+        await RebuildAsync("Umb_Content");
+
+        // Assert
+        await _commitMonitor
+            .Received(1)
+            .WaitForCommitAsync("Umb_Content", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RebuildAsync_UmbracoSearchRefuses_ThrowsWithReason()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Content", UmbracoObjectTypes.Document);
+        _rebuilder.Rebuild("Umb_Content").Returns(false);
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("Umb_Content")
+        );
+
+        // Assert
+        Assert.Contains("refused", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_ZeroDowntimeCopyNotSwappedIn_ThrowsBecauseTheOldCopyWasKept()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Members", UmbracoObjectTypes.Member);
+        _activeIndexManager.ResolveActiveIndexName("Umb_Members").Returns("Umb_Members_a");
+        RebuildAnnounces("Umb_Members");
+
+        // Act
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                RebuildAsync("Umb_Members", zeroDowntime: true)
+        );
+
+        // Assert
+        Assert.Contains("kept the current copy", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_ZeroDowntimeCopySwappedIn_Completes()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Content", UmbracoObjectTypes.Document);
+        _activeIndexManager
+            .ResolveActiveIndexName("Umb_Content")
+            .Returns("Umb_Content_a", "Umb_Content_b");
+        RebuildAnnounces("Umb_Content");
+
+        // Act
+        Task rebuild = RebuildAsync("Umb_Content", zeroDowntime: true);
+        await rebuild;
+
+        // Assert
+        Assert.True(rebuild.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_NeverStarts_FailsAfterTheStartTimeout()
+    {
+        // Arrange
+        RegisterExamine<IDraftContentChangeStrategy>("Umb_Content", UmbracoObjectTypes.Document);
+        _rebuilder.Rebuild("Umb_Content").Returns(true);
+        Task rebuild = RebuildAsync("Umb_Content");
+
+        // Act
+        while (!rebuild.IsCompleted)
+        {
+            _time.Advance(TimeSpan.FromSeconds(30));
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                rebuild
+        );
+        Assert.Contains("did not start", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Makes Umbraco Search accept the rebuild and announce its start and end at once.</summary>
+    private void RebuildAnnounces(string alias) =>
+        _rebuilder
+            .Rebuild(alias)
+            .Returns(_ =>
+            {
+                _tracker.OnStarting(alias);
+                _tracker.OnCompleted(alias);
+                return true;
+            });
+
+    private Task RebuildAsync(string alias, bool zeroDowntime = false) =>
+        CreateSource(zeroDowntime)
+            .RebuildAsync(alias, new Progress<long>(), TestContext.Current.CancellationToken);
+
     private void RegisterExamine<TStrategy>(string alias, UmbracoObjectTypes type)
         where TStrategy : class, IContentChangeStrategy =>
         _options.RegisterContentIndex<IExamineIndexer, IExamineSearcher, TStrategy>(alias, type);
@@ -263,8 +393,12 @@ public class UmbracoSearchIndexSourceTests
                 new ExamineSearchProviderSettings { ZeroDowntimeIndexing = zeroDowntime }
             ),
             NullLogger<UmbracoSearchIndexSource>.Instance,
+            _tracker,
+            _time,
             _resolver,
-            _activeIndexManager
+            _activeIndexManager,
+            _rebuilder,
+            _commitMonitor
         );
 
     private Task<IReadOnlyList<IndexSummary>> ListAsync(bool zeroDowntime = false) =>

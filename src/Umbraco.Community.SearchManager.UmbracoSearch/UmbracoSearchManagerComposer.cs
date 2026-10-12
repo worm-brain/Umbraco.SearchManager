@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Search.Core.Notifications;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Infrastructure;
 using Umbraco.Community.SearchManager.UmbracoSearch.Indexes;
+using Umbraco.Extensions;
 
 namespace Umbraco.Community.SearchManager.UmbracoSearch;
 
@@ -22,5 +24,16 @@ public sealed class UmbracoSearchManagerComposer : IComposer
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddSingleton<IIndexSource, UmbracoSearchIndexSource>();
+
+        // Rebuilds: Umbraco Search only announces its rebuilds through notifications.
+        builder.Services.AddSingleton<UmbracoSearchRebuildTracker>();
+        builder.AddNotificationHandler<
+            IndexRebuildStartingNotification,
+            UmbracoSearchRebuildNotificationHandler
+        >();
+        builder.AddNotificationHandler<
+            IndexRebuildCompletedNotification,
+            UmbracoSearchRebuildNotificationHandler
+        >();
     }
 }
