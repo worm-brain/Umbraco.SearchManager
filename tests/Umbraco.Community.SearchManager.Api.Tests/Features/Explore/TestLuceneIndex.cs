@@ -2,6 +2,7 @@ using Examine;
 using Examine.Lucene;
 using Examine.Lucene.Directories;
 using Examine.Lucene.Providers;
+using Lucene.Net.Analysis;
 using Lucene.Net.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -22,14 +23,29 @@ internal sealed class TestLuceneIndex : IDisposable
     /// <param name="name">The index name.</param>
     /// <param name="documents">The documents.</param>
     public TestLuceneIndex(string name, params ValueSet[] documents)
-        : this(name, null, documents) { }
+        : this(name, (IValueSetValidator?)null, documents) { }
 
     /// <summary>Creates the index with a value set validator and adds the documents synchronously.</summary>
     /// <param name="name">The index name.</param>
     /// <param name="validator">The validator, as Umbraco's indexes have; null for none.</param>
     /// <param name="documents">The documents, which the validator must let in.</param>
     public TestLuceneIndex(string name, IValueSetValidator? validator, params ValueSet[] documents)
-        : this(name, new KeptRamDirectory(), validator)
+        : this(name, validator, null, documents) { }
+
+    /// <summary>Creates the index with the analyzer an Umbraco index sets, and adds the documents synchronously.</summary>
+    /// <param name="name">The index name.</param>
+    /// <param name="analyzer">The index's analyzer, as Umbraco sets it per index; null for Examine's default.</param>
+    /// <param name="documents">The documents.</param>
+    public TestLuceneIndex(string name, Analyzer? analyzer, params ValueSet[] documents)
+        : this(name, null, analyzer, documents) { }
+
+    private TestLuceneIndex(
+        string name,
+        IValueSetValidator? validator,
+        Analyzer? analyzer,
+        ValueSet[] documents
+    )
+        : this(name, new KeptRamDirectory(), validator, analyzer)
     {
         using (Index.WithThreadingMode(IndexThreadingMode.Synchronous))
         {
@@ -40,7 +56,8 @@ internal sealed class TestLuceneIndex : IDisposable
     private TestLuceneIndex(
         string name,
         KeptRamDirectory directory,
-        IValueSetValidator? validator = null
+        IValueSetValidator? validator = null,
+        Analyzer? analyzer = null
     )
     {
         _directory = directory;
@@ -48,6 +65,7 @@ internal sealed class TestLuceneIndex : IDisposable
         {
             DirectoryFactory = new GenericDirectoryFactory(_ => _directory),
             Validator = validator,
+            Analyzer = analyzer,
             FieldDefinitions = new FieldDefinitionCollection(
                 new FieldDefinition("level", FieldDefinitionTypes.Integer),
                 new FieldDefinition("price", FieldDefinitionTypes.Double),
