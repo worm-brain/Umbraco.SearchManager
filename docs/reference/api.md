@@ -54,6 +54,15 @@ A run is `Queued`, `Running`, `Succeeded`, `Failed` or `Cancelled`. A core Exami
 
 The Swagger UI shows the full request and response schemas.
 
+## Diagnose
+
+`{target}` is an index name, as listed by `GET /explore/targets`. Member indexes need Members
+section access, as in Explore.
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /diagnose/{target}/fields` | Every field's type, analyzer, coverage, distinct terms and top terms (dates: the range). An index without statistics answers with `available: false` and the reason. |
+
 ## Live updates
 
 The backoffice receives rebuild changes through Umbraco's server events, so the Rebuilds panel

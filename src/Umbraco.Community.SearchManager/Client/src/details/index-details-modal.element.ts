@@ -7,12 +7,14 @@ import { engineLabel, formatCount } from "../indexes/index-format.js";
 import { formatDuration } from "../rebuilds/rebuild-model.js";
 import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { describeError } from "../shared/describe-error.js";
+import { fieldStatisticsUrl } from "../shared/explore-links.js";
 import type { IndexDetailsModalData } from "./index-details-modal.token.js";
 
 /**
  * The index details sidebar: the index's persisted rebuild history (last 20 runs, newest first,
  * from `GET /rebuilds/history`) and its provider properties, as the core Examine dashboard shows
- * them.
+ * them, plus a link to the index's field statistics in the Diagnose view when the index can give
+ * them (`capabilities.termStatistics`).
  *
  * Bound by the `Umbraco.Community.SearchManager.Modal.IndexDetails` manifest; opened with
  * `SEARCH_MANAGER_INDEX_DETAILS_MODAL`.
@@ -62,6 +64,21 @@ export class SearchManagerIndexDetailsModalElement extends UmbModalBaseElement<I
         <uui-box headline=${this.localize.term("searchManager_detailsPropertiesTitle")}>
           ${this.#renderProperties(index.properties)}
         </uui-box>
+        ${
+          index.capabilities.termStatistics
+            ? html`<uui-button
+                slot="actions"
+                look="secondary"
+                href=${fieldStatisticsUrl(index.name)}
+                label=${this.localize.term("searchManager_boxFieldStatistics")}
+                @click=${
+                  // The link navigates within the same workspace; close the sidebar so it does not
+                  // stay open over the Diagnose view. The anchor's navigation still happens.
+                  () => this._rejectModal()
+                }
+              ></uui-button>`
+            : nothing
+        }
         <uui-button
           slot="actions"
           look="secondary"

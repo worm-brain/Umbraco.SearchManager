@@ -16,15 +16,25 @@ export const INDEX_QUERY_PARAMETER = "index";
  *
  * @param view - The view.
  * @param indexName - The index.
+ * @param extra - More query parameters for the view (Explore's chips, Diagnose's tool, ...).
+ *   They follow `index` in order; an `index` among them is ignored, so `indexName` always wins.
  * @returns The path, for example `section/settings/workspace/search-manager/view/explore?index=Umb_Content`.
  */
-export function searchManagerViewPath(view: SearchManagerView, indexName: string): string {
+export function searchManagerViewPath(
+  view: SearchManagerView,
+  indexName: string,
+  extra?: URLSearchParams | Record<string, string>,
+): string {
   const path = UMB_WORKSPACE_VIEW_PATH_PATTERN.generateAbsolute({
     sectionName: UMB_SETTINGS_SECTION_PATHNAME,
     entityType: SEARCH_MANAGER_ENTITY_TYPE,
     viewPathname: view,
   });
-  return `${path}?${new URLSearchParams({ [INDEX_QUERY_PARAMETER]: indexName })}`;
+  const params = new URLSearchParams({ [INDEX_QUERY_PARAMETER]: indexName });
+  for (const [key, value] of new URLSearchParams(extra)) {
+    if (key !== INDEX_QUERY_PARAMETER) params.set(key, value);
+  }
+  return `${path}?${params}`;
 }
 
 /**

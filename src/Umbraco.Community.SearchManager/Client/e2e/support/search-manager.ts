@@ -26,6 +26,39 @@ export async function openExplore(page: Page, index = "ExternalIndex"): Promise<
 }
 
 /**
+ * Opens the Diagnose view's field statistics for an index and waits for the table.
+ *
+ * @param page - A logged-in page.
+ * @param index - The index.
+ */
+export async function openFieldStatistics(page: Page, index = "ExternalIndex"): Promise<void> {
+  await page.goto(`${WORKSPACE}/view/diagnose?index=${encodeURIComponent(index)}&tool=fields`);
+  await expect(page.locator("search-manager-field-statistics uui-table").first()).toBeVisible({ timeout: 60_000 });
+}
+
+/**
+ * One row of the field statistics table.
+ *
+ * @param page - A page on the Diagnose view's Fields tool.
+ * @param field - The field name, as the row's first cell shows it.
+ * @returns The locator of the row.
+ */
+export function fieldRow(page: Page, field: string): Locator {
+  return page.locator(`search-manager-field-statistics uui-table-row[data-field="${field}"]`).first();
+}
+
+/**
+ * Reads the first number in a text, ignoring thousands separators ("1,234 missing" gives 1234).
+ *
+ * @param text - The text.
+ * @returns The number, or NaN when there is none.
+ */
+export function firstNumber(text: string | null): number {
+  const match = /\d[\d,]*/.exec(text ?? "");
+  return match ? Number(match[0].replace(/,/g, "")) : Number.NaN;
+}
+
+/**
  * Waits until the open Explore view shows at least `minimum` results for an empty search,
  * reloading while it does not. A fresh sample site seeds its content and indexes it in the
  * background after it starts answering, so the first spec to search may get there first.

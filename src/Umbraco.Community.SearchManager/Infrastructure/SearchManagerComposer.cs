@@ -2,9 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Community.SearchManager.Core.Diagnose;
 using Umbraco.Community.SearchManager.Core.Explore;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Core.Rebuilds;
+using Umbraco.Community.SearchManager.Features.Diagnose.Fields;
 using Umbraco.Community.SearchManager.Features.Explore;
 using Umbraco.Community.SearchManager.Features.Indexes;
 using Umbraco.Community.SearchManager.Features.Rebuilds;
@@ -40,6 +42,10 @@ public sealed class SearchManagerComposer : IComposer
         builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<IExploreSourceRegistry, ExploreSourceRegistry>();
         builder.Services.AddSingleton<IExploreSource, ExamineExploreSource>();
+
+        // Diagnose: one small source per engine and tool, keyed by Explore's targets (ADR 0018).
+        builder.Services.AddSingleton<FieldStatisticsCache>();
+        builder.Services.AddSingleton<IFieldStatisticsSource, ExamineFieldStatisticsSource>();
 
         // Rebuild queue: in-memory status, drained by a hosted service on this server.
         builder.Services.AddSingleton<IRebuildQueue, RebuildQueue>();

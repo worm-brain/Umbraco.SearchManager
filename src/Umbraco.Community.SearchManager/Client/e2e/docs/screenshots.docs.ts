@@ -1,5 +1,12 @@
 import { expect, test } from "../support/test.js";
-import { openExplore, openIndexes, searchBox, selectBox, waitForSeededIndex } from "../support/search-manager.js";
+import {
+  openExplore,
+  openFieldStatistics,
+  openIndexes,
+  searchBox,
+  selectBox,
+  waitForSeededIndex,
+} from "../support/search-manager.js";
 import { repoRoot } from "../support/sites.js";
 import type { Page } from "@playwright/test";
 
@@ -115,6 +122,13 @@ test("native mode", async ({ page }) => {
   await page.locator("search-manager-native-box uui-input input").fill("+__NodeTypeAlias:blogpost and level:2");
   await expect(page.getByText(/^Fix:/).first()).toBeVisible();
   await shoot(page, "native-mode");
+});
+
+test("diagnose field statistics", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await openFieldStatistics(page);
+  await shoot(page, "diagnose-fields");
 });
 
 test("explore an Umbraco Search index", async ({ page }) => {

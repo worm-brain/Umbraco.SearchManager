@@ -318,27 +318,13 @@ internal sealed class UmbracoSearchExploreSource : IExploreSource
     }
 
     /// <summary>The Examine provider's index that serves queries for an alias, or null.</summary>
-    private IIndex? PhysicalIndex(string alias)
-    {
-        ContentIndexRegistration? registration = _registrations.FirstOrDefault(candidate =>
-            string.Equals(candidate.IndexAlias, alias, StringComparison.OrdinalIgnoreCase)
+    private IIndex? PhysicalIndex(string alias) =>
+        UmbracoSearchPhysicalIndexes.Find(
+            _registrations,
+            alias,
+            _activeIndexManager,
+            _examineManager
         );
-        if (
-            registration is null
-            || _activeIndexManager is null
-            || !typeof(IExamineIndexer).IsAssignableFrom(registration.Indexer)
-        )
-        {
-            return null;
-        }
-
-        return _examineManager.TryGetIndex(
-            _activeIndexManager.ResolveActiveIndexName(registration.IndexAlias),
-            out IIndex? index
-        )
-            ? index
-            : null;
-    }
 
     /// <summary>Reads the entities of the documents found, by key.</summary>
     private Dictionary<Guid, IEntitySlim> Entities(Document[] documents)

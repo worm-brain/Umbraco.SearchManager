@@ -106,6 +106,18 @@ export class SearchManagerSearchIndexBoxElement extends UmbLitElement {
             href=${searchManagerViewPath("explore", alias)}
             label=${this.localize.term("searchManager_boxExplore")}
           ></uui-button>
+          ${
+            // Only for indexes Search Manager can read terms from (Lucene-backed); for others the
+            // Diagnose view would only say why there are no statistics.
+            this._index?.capabilities.termStatistics
+              ? html`<uui-button
+                  look="secondary"
+                  compact
+                  href=${searchManagerViewPath("diagnose", alias, { tool: "fields" })}
+                  label=${this.localize.term("searchManager_boxFieldStatistics")}
+                ></uui-button>`
+              : nothing
+          }
           <uui-button
             look="secondary"
             compact

@@ -158,7 +158,7 @@ internal static class LuceneTerms
     /// <param name="valueType">How Examine writes the field.</param>
     /// <param name="lowerPrecision">Whether the term is a numeric field's lower-precision term.</param>
     /// <returns>The value, or null when it cannot be read.</returns>
-    private static string? Decode(
+    internal static string? Decode(
         BytesRef term,
         IIndexFieldValueType? valueType,
         out bool lowerPrecision

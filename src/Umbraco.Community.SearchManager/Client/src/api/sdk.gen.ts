@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
+import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetFieldStatisticsData, GetFieldStatisticsErrors, GetFieldStatisticsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,16 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export class DiagnoseService {
+    public static getFieldStatistics<ThrowOnError extends boolean = false>(options: Options<GetFieldStatisticsData, ThrowOnError>): RequestResult<GetFieldStatisticsResponses, GetFieldStatisticsErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetFieldStatisticsResponses, GetFieldStatisticsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/{target}/fields',
+            ...options
+        });
+    }
+}
 
 export class ExploreService {
     public static compileExplore<ThrowOnError extends boolean = false>(options: Options<CompileExploreData, ThrowOnError>): RequestResult<CompileExploreResponses, CompileExploreErrors, ThrowOnError> {

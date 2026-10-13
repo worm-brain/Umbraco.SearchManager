@@ -82,9 +82,15 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 - Umbraco Search's own index page gets a **Search Manager** box with the last rebuild and links
   to Explore and the index's history.
 
+**Diagnose why a page is not found**
+
+- **Field statistics** for every field of an index: coverage, documents missing it, distinct
+  terms, the most common terms and the analyzer. Click a term or a missing count to search for
+  it in Explore. [Read field statistics](docs/how-to/read-field-statistics.md)
+
 ### Coming next
 
-- **Diagnose:** field statistics, analyzers and where a page is indexed.
+- **Diagnose:** analyzers and where a page is indexed.
 
 ## A quick tour
 

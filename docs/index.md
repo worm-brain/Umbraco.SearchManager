@@ -28,6 +28,8 @@ tutorial.
 - [Search an index](how-to/search-an-index.md): chips, suggestions, the fields panel, the
   document drawer, columns and cultures.
 - [Use raw Lucene](how-to/use-raw-lucene.md): Show query, raw Lucene mode and its fixes.
+- [Read field statistics](how-to/read-field-statistics.md): coverage, distinct and top terms and
+  the analyzer of every field, with links into Explore.
 - [Use it with Umbraco Search](how-to/use-with-umbraco-search.md): the adapter package, what it
   adds and what Explore can send.
 - [Keep the core Examine dashboard](how-to/keep-the-core-examine-dashboard.md): show both tools

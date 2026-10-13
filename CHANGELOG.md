@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Diagnose > Fields: the statistics of every field of an index: type, analyzer, coverage and the
+  documents missing it, distinct terms and the five most common terms (dates: earliest and
+  latest). Click a term or a missing count to search for it in Explore. Culture variants, raw
+  copies and system fields show on request. Read from the index's Lucene reader and kept until
+  the index changes. Umbraco Search indexes on the Examine provider are covered by the adapter.
+  The index details sidebar and the Search Manager box on Umbraco Search's index page link to it.
+
 ## [18.0.0] - 2026-10-12
 
 The first release for Umbraco 18, with the same features as 17.0.0.

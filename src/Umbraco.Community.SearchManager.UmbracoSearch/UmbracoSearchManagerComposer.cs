@@ -3,10 +3,12 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Infrastructure.Manifest;
 using Umbraco.Cms.Search.Core.Notifications;
+using Umbraco.Community.SearchManager.Core.Diagnose;
 using Umbraco.Community.SearchManager.Core.Explore;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Infrastructure;
 using Umbraco.Community.SearchManager.UmbracoSearch.Backoffice;
+using Umbraco.Community.SearchManager.UmbracoSearch.Diagnose;
 using Umbraco.Community.SearchManager.UmbracoSearch.Explore;
 using Umbraco.Community.SearchManager.UmbracoSearch.Indexes;
 using Umbraco.Extensions;
@@ -31,6 +33,9 @@ public sealed class UmbracoSearchManagerComposer : IComposer
 
         // Explore: chips compiled to ISearcher.SearchAsync (ADR 0016).
         builder.Services.AddSingleton<IExploreSource, UmbracoSearchExploreSource>();
+
+        // Diagnose: field statistics from the Examine provider's physical index (ADR 0018).
+        builder.Services.AddSingleton<IFieldStatisticsSource, UmbracoSearchFieldStatisticsSource>();
 
         // The Search Manager box on Umbraco Search's index page.
         builder.Services.AddSingleton<IPackageManifestReader, SearchIndexBoxManifestReader>();
