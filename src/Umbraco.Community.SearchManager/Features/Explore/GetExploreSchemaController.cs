@@ -7,7 +7,7 @@ namespace Umbraco.Community.SearchManager.Features.Explore;
 
 /// <summary>
 /// <c>GET /explore/{target}/fields</c>: a target's fields, aliases and operators, and the site's
-/// cultures, for the chips, the chip editor and the column picker.
+/// cultures with the one the picker starts on, for the chips, the chip editor and the column picker.
 /// </summary>
 /// <param name="registry">Finds targets and their sources.</param>
 /// <param name="memberIndexAccess">Decides who may see member data.</param>
@@ -36,6 +36,7 @@ public sealed class GetExploreSchemaController(
 
         FieldSchema schema = await lookup.Source!.GetSchemaAsync(lookup.Target!, cancellationToken);
         IReadOnlyList<string> cultures = await lookup.Source.GetCulturesAsync(cancellationToken);
+        string? defaultCulture = await lookup.Source.GetDefaultCultureAsync(cancellationToken);
         return Ok(
             new ExploreSchema(
                 schema.Fields,
@@ -43,7 +44,8 @@ public sealed class GetExploreSchemaController(
                 lookup.Source.Operators,
                 cultures,
                 schema.DocumentCount,
-                lookup.Source.Unsupported
+                lookup.Source.Unsupported,
+                defaultCulture
             )
         );
     }
