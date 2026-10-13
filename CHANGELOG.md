@@ -14,6 +14,14 @@ All notable changes to this project are documented here. The format follows
   copies and system fields show on request. Read from the index's Lucene reader and kept until
   the index changes. Umbraco Search indexes on the Examine provider are covered by the adapter.
   The index details sidebar and the Search Manager box on Umbraco Search's index page link to it.
+- Diagnose > Find a node: look a document up by name, id or key and see, for every index, whether
+  it holds the document (and in which cultures), why not (not published, in the recycle bin,
+  outside the index's part of the tree, protected, document type left out, or the index is out
+  of date), and whether its copy is stale. Test a search against the document: the overall
+  verdict and, per chip, matched or not with the document's value of the field. Umbraco Search
+  indexes are covered by the adapter.
+- A "Show in search indexes" action on documents in the content tree, for users with Settings
+  access, opens the same answer in a sidebar.
 
 ## [18.0.0] - 2026-10-12
 

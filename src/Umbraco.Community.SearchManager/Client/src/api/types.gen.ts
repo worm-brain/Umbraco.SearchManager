@@ -4,6 +4,14 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:44410' | (string & {});
 };
 
+export type ClauseMatch = {
+    index: number;
+    matched?: boolean | null;
+    skippedReason?: string | null;
+    field?: string | null;
+    nodeValues: Array<string>;
+};
+
 export type CompileRequest = {
     filters: Array<Filter>;
     culture?: string | null;
@@ -172,6 +180,21 @@ export type IndexField = {
 
 export type IndexHealth = 'Healthy' | 'Rebuilding' | 'Unhealthy' | 'Corrupted' | 'Empty' | 'Incomplete' | 'Unknown';
 
+export type IndexPresence = {
+    target: string;
+    engine: string;
+    status: PresenceStatus;
+    documentCount: number;
+    cultures: Array<string>;
+    reason?: string | null;
+    stale?: boolean | null;
+    indexUpdateDate?: string | null;
+    expectedUpdateDate?: string | null;
+    viewFilter?: Filter | null;
+    viewDocumentId?: string | null;
+    viewCulture?: string | null;
+};
+
 export type IndexSummary = {
     name: string;
     engine: string;
@@ -210,6 +233,54 @@ export type NativeWarning = {
     replacement?: string | null;
 };
 
+export type NodeCandidate = {
+    id: number;
+    key: string;
+    name: string;
+    icon?: string | null;
+    trashed: boolean;
+};
+
+export type NodeCulture = {
+    iso: string;
+    published: boolean;
+    draft: boolean;
+    updateDate?: string | null;
+    publishDate?: string | null;
+};
+
+export type NodeFacts = {
+    id: number;
+    key: string;
+    name: string;
+    entityType: string;
+    contentTypeAlias: string;
+    path: string;
+    published: boolean;
+    trashed: boolean;
+    protected: boolean;
+    updateDate: string;
+    publishDate?: string | null;
+    cultures: Array<NodeCulture>;
+};
+
+export type NodeMatchRequest = {
+    filters: Array<Filter>;
+    culture?: string | null;
+};
+
+export type NodeMatchResult = {
+    inIndex: boolean;
+    matches: boolean;
+    query: string;
+    clauses: Array<ClauseMatch>;
+};
+
+export type NodePresenceResult = {
+    node: NodeFacts;
+    indexes: Array<IndexPresence>;
+};
+
 export type ParseFallback = {
     code: string;
     message: string;
@@ -223,6 +294,8 @@ export type ParseResult = {
     filters: Array<Filter>;
     fallback?: ParseFallback | null;
 };
+
+export type PresenceStatus = 'Present' | 'Missing' | 'NotApplicable';
 
 export type ProblemDetails = {
     type?: string | null;
@@ -360,6 +433,117 @@ export type GetFieldStatisticsResponses = {
 };
 
 export type GetFieldStatisticsResponse = GetFieldStatisticsResponses[keyof GetFieldStatisticsResponses];
+
+export type MatchNodeData = {
+    body?: NodeMatchRequest;
+    path: {
+        target: string;
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/nodes/{key}/match';
+};
+
+export type MatchNodeErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type MatchNodeError = MatchNodeErrors[keyof MatchNodeErrors];
+
+export type MatchNodeResponses = {
+    /**
+     * OK
+     */
+    200: NodeMatchResult;
+};
+
+export type MatchNodeResponse = MatchNodeResponses[keyof MatchNodeResponses];
+
+export type FindNodesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        query?: string;
+        take?: number;
+    };
+    url: '/umbraco/search-manager/api/v1/diagnose/nodes';
+};
+
+export type FindNodesErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type FindNodesError = FindNodesErrors[keyof FindNodesErrors];
+
+export type FindNodesResponses = {
+    /**
+     * OK
+     */
+    200: Array<NodeCandidate>;
+};
+
+export type FindNodesResponse = FindNodesResponses[keyof FindNodesResponses];
+
+export type GetNodePresenceData = {
+    body?: never;
+    path: {
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/nodes/{key}';
+};
+
+export type GetNodePresenceErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetNodePresenceError = GetNodePresenceErrors[keyof GetNodePresenceErrors];
+
+export type GetNodePresenceResponses = {
+    /**
+     * OK
+     */
+    200: NodePresenceResult;
+};
+
+export type GetNodePresenceResponse = GetNodePresenceResponses[keyof GetNodePresenceResponses];
 
 export type CompileExploreData = {
     body?: CompileRequest;

@@ -15,6 +15,7 @@ import {
   type DiagnoseViewState,
 } from "./diagnose-state.js";
 import "./fields/field-statistics.element.js";
+import "./node/find-node.element.js";
 
 /** The index Diagnose opens on when the URL names none, as Explore does. */
 const DEFAULT_INDEX = "ExternalIndex";
@@ -41,7 +42,8 @@ interface DiagnoseToolDefinition {
  * above the tool itself.
  *
  * - **Tools:** a data-driven list ({@link SearchManagerDiagnoseViewElement.tools}); add a tool by
- *   adding an entry. Today: Fields (`search-manager-field-statistics`).
+ *   adding an entry. Today: Fields (`search-manager-field-statistics`) and Find a node
+ *   (`search-manager-find-node`, which works across indexes, so the index picker hides).
  * - **Index picker:** the index targets of `GET /explore/targets` (searchers are left out; member
  *   indexes are already filtered by the server for users without Members access).
  * - **URL:** the state (tool, index, the tools' own keys) is written to the query string with
@@ -80,6 +82,17 @@ export class SearchManagerDiagnoseViewElement extends UmbLitElement {
               .filter=${this._state.filter ?? ""}
             ></search-manager-field-statistics>`
           : nothing,
+    },
+    {
+      tool: "node",
+      label: "searchManager_diagnoseFindNode",
+      usesIndex: false,
+      render: () =>
+        html`<search-manager-find-node
+          .nodeKey=${this._state.node}
+          .culture=${this._state.culture}
+          .query=${this._state.q}
+        ></search-manager-find-node>`,
     },
   ];
 
@@ -137,20 +150,22 @@ export class SearchManagerDiagnoseViewElement extends UmbLitElement {
    * @returns The template.
    */
   override render() {
-    if (this._targets && this._targets.length === 0) {
+    const tool = this.#tool;
+    // Only the tools that work on one index need one; Find a node works without.
+    if (tool.usesIndex && this._targets && this._targets.length === 0) {
       return html`<search-manager-empty-state headline=${this.localize.term("searchManager_tabDiagnose")}>
         <p>${this.localize.term("searchManager_diagnoseNoTargets")}</p>
       </search-manager-empty-state>`;
     }
 
-    const tool = this.#tool;
     const target = this.#target;
+    const waiting = tool.usesIndex && !this._targets;
     return html`
       <div class="bar">${this.#renderSwitcher(tool)} ${tool.usesIndex ? this.#renderIndexPicker(target) : nothing}</div>
       ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : nothing}
-      ${!this._targets && !this._error ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
+      ${waiting && !this._error ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
       <div @search-manager-diagnose-change=${(event: SearchManagerDiagnoseChangeEvent) => this.#update(event.change)}>
-        ${this._targets ? tool.render(tool.usesIndex ? target : undefined) : nothing}
+        ${waiting ? nothing : tool.render(tool.usesIndex ? target : undefined)}
       </div>
     `;
   }

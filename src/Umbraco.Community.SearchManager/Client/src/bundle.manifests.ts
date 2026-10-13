@@ -6,6 +6,7 @@ import { manifests as explore } from "./explore/manifests.js";
 import { manifests as rebuilds } from "./rebuilds/manifests.js";
 import { manifests as details } from "./details/manifests.js";
 import { manifests as diagnose } from "./diagnose/manifests.js";
+import { manifests as nodeAction } from "./node-action/manifests.js";
 
 /**
  * Every manifest the package registers. `umbraco-package.json` loads this bundle, and each
@@ -20,4 +21,5 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...rebuilds,
   ...details,
   ...diagnose,
+  ...nodeAction,
 ];

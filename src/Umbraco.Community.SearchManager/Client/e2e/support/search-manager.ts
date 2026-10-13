@@ -59,6 +59,34 @@ export function firstNumber(text: string | null): number {
 }
 
 /**
+ * Opens Diagnose's Find a node tool, searches for a document by its exact name and shows it,
+ * waiting for its presence table.
+ *
+ * @param page - A logged-in page.
+ * @param name - The document's exact name.
+ */
+export async function findNode(page: Page, name: string): Promise<void> {
+  await page.goto(`${WORKSPACE}/view/diagnose?tool=node`);
+  const search = page.locator("search-manager-find-node uui-input.search input").first();
+  await expect(search).toBeVisible({ timeout: 60_000 });
+  await search.fill(name);
+  // The candidate's name is uui-ref-node's #open-part button, which fires `open`.
+  await page.locator(`search-manager-find-node uui-ref-node[name="${name}"] #open-part`).first().click();
+  await expect(page.locator("search-manager-node-presence uui-table").first()).toBeVisible({ timeout: 30_000 });
+}
+
+/**
+ * One index's row of a presence table (Find a node, or the "Show in search indexes" sidebar).
+ *
+ * @param page - A page showing a presence table.
+ * @param index - The index name.
+ * @returns The locator of the row.
+ */
+export function presenceRow(page: Page, index: string): Locator {
+  return page.locator(`search-manager-node-presence uui-table-row[data-index="${index}"]`).first();
+}
+
+/**
  * Waits until the open Explore view shows at least `minimum` results for an empty search,
  * reloading while it does not. A fresh sample site seeds its content and indexes it in the
  * background after it starts answering, so the first spec to search may get there first.

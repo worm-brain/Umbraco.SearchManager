@@ -62,6 +62,9 @@ section access, as in Explore.
 | Method and path | What it does |
 | --- | --- |
 | `GET /diagnose/{target}/fields` | Every field's type, analyzer, coverage, distinct terms and top terms (dates: the range). An index without statistics answers with `available: false` and the reason. |
+| `GET /diagnose/nodes?query=&take=10` | Documents by name, id or key, for "Find a node". |
+| `GET /diagnose/nodes/{key}` | A document's facts and, for every index you can see, whether it holds the document, why not, and whether its copy is stale. |
+| `POST /diagnose/{target}/nodes/{key}/match` | Tests filters against a document: whether the whole query finds it and, per filter, whether it matches and the document's values. Body: `{ "filters": [...], "culture": "en-US" }`. |
 
 ## Live updates
 

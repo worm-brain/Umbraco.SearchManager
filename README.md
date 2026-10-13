@@ -87,10 +87,14 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 - **Field statistics** for every field of an index: coverage, documents missing it, distinct
   terms, the most common terms and the analyzer. Click a term or a missing count to search for
   it in Explore. [Read field statistics](docs/how-to/read-field-statistics.md)
+- **Find a node:** look a page up by name, id or key and see which indexes hold it, why the
+  others do not, and whether a copy is out of date. Then test a search against it chip by chip.
+  The content tree's **Show in search indexes** action opens the same answer from the page.
+  [Find where a page is indexed](docs/how-to/find-where-a-page-is-indexed.md)
 
 ### Coming next
 
-- **Diagnose:** analyzers and where a page is indexed.
+- **Diagnose:** analyzers.
 
 ## A quick tour
 

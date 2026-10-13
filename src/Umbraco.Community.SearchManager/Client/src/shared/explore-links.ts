@@ -41,3 +41,13 @@ export function exploreUrl(target: string, options: ExploreLinkOptions = {}): st
 export function fieldStatisticsUrl(index: string): string {
   return searchManagerViewPath("diagnose", index, { tool: "fields" });
 }
+
+/**
+ * The backoffice path of the Diagnose view's Find a node tool, open on one document.
+ *
+ * @param key - The document key.
+ * @returns The path, for example `section/settings/workspace/search-manager/view/diagnose?tool=node&node=...`.
+ */
+export function findNodeUrl(key: string): string {
+  return searchManagerViewPath("diagnose", undefined, { tool: "node", node: key });
+}

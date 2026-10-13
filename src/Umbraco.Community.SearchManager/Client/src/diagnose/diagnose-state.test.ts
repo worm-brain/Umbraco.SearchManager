@@ -29,6 +29,13 @@ describe("diagnose view state in the URL", () => {
     expect(decodeDiagnoseState(new URLSearchParams("?index=Umb_Content")).index).toBe("Umb_Content");
   });
 
+  it("opens Find a node on the node a link names, keeping its culture and query", () => {
+    const decoded = decodeDiagnoseState(
+      new URLSearchParams("tool=node&node=abc&culture=da-DK&q=umbraco%20type%3AblogPost"),
+    );
+    expect(decoded).toMatchObject({ tool: "node", node: "abc", culture: "da-DK", q: "umbraco type:blogPost" });
+  });
+
   it("falls back to the fields tool for an unknown tool, keeping the rest", () => {
     const decoded = decodeDiagnoseState(new URLSearchParams("tool=nope&index=ExternalIndex&variants=1"));
     expect(decoded).toEqual({ ...createDiagnoseState(), index: "ExternalIndex", variants: true });

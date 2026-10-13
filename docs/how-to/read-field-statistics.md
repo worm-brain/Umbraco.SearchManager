@@ -18,6 +18,8 @@ kept until the index changes, so later visits are instant.
 
 ## Read the table
 
+![Diagnose > Fields for ExternalIndex: each field with its type, analyzer, coverage, unique terms, top terms and missing count](../images/diagnose-fields.png)
+
 | Column | What it tells you |
 | --- | --- |
 | Field | The field name, Umbraco's name for it (such as "Document type") and, for Umbraco Search, the field's name in the Lucene index. |
@@ -57,4 +59,5 @@ providers other than Examine show why they have no statistics instead.
 ## Related
 
 - [Search an index](search-an-index.md)
+- [Find where a page is indexed](find-where-a-page-is-indexed.md)
 - [ADR 0018: field statistics per reader version](../adr/0018-field-statistics-per-reader-version.md)

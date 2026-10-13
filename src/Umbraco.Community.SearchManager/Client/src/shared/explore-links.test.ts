@@ -11,7 +11,7 @@ vi.mock("@umbraco-cms/backoffice/workspace", () => ({
   },
 }));
 
-const { exploreUrl, fieldStatisticsUrl } = await import("./explore-links.js");
+const { exploreUrl, fieldStatisticsUrl, findNodeUrl } = await import("./explore-links.js");
 
 /** Reads an Explore link back the way the Explore view does. */
 function readBack(url: string) {
@@ -42,6 +42,14 @@ describe("fieldStatisticsUrl", () => {
   it("opens the fields tool of Diagnose on the index", () => {
     expect(fieldStatisticsUrl("ExternalIndex")).toBe(
       "section/settings/workspace/search-manager/view/diagnose?index=ExternalIndex&tool=fields",
+    );
+  });
+});
+
+describe("findNodeUrl", () => {
+  it("opens the Find a node tool on the document, with no index", () => {
+    expect(findNodeUrl("8e1f2a3b-4c5d-4e6f-9a0b-1c2d3e4f5a6b")).toBe(
+      "section/settings/workspace/search-manager/view/diagnose?tool=node&node=8e1f2a3b-4c5d-4e6f-9a0b-1c2d3e4f5a6b",
     );
   });
 });

@@ -31,6 +31,20 @@ describe("searchManagerViewPath", () => {
   });
 });
 
+describe("searchManagerViewPath without an index", () => {
+  it("writes only the extra parameters", () => {
+    expect(searchManagerViewPath("diagnose", undefined, { tool: "node" })).toBe(
+      "section/settings/workspace/search-manager/view/diagnose?tool=node",
+    );
+  });
+
+  it("writes no query string when there is nothing to write", () => {
+    expect(searchManagerViewPath("diagnose", undefined)).toBe(
+      "section/settings/workspace/search-manager/view/diagnose",
+    );
+  });
+});
+
 describe("indexFromQuery", () => {
   it("reads the index back", () => {
     expect(indexFromQuery("?index=Umb_Content")).toBe("Umb_Content");

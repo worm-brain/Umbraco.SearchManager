@@ -32,10 +32,15 @@ public sealed class UmbracoSearchManagerComposer : IComposer
         builder.Services.AddSingleton<IIndexSource, UmbracoSearchIndexSource>();
 
         // Explore: chips compiled to ISearcher.SearchAsync (ADR 0016).
-        builder.Services.AddSingleton<IExploreSource, UmbracoSearchExploreSource>();
+        // Registered as itself too, so Diagnose compiles chips exactly as Explore does.
+        builder.Services.AddSingleton<UmbracoSearchExploreSource>();
+        builder.Services.AddSingleton<IExploreSource>(services =>
+            services.GetRequiredService<UmbracoSearchExploreSource>()
+        );
 
-        // Diagnose: field statistics from the Examine provider's physical index (ADR 0018).
+        // Diagnose: field statistics and "Find a node" (ADR 0018, 0019).
         builder.Services.AddSingleton<IFieldStatisticsSource, UmbracoSearchFieldStatisticsSource>();
+        builder.Services.AddSingleton<INodePresenceSource, UmbracoSearchNodePresenceSource>();
 
         // The Search Manager box on Umbraco Search's index page.
         builder.Services.AddSingleton<IPackageManifestReader, SearchIndexBoxManifestReader>();
