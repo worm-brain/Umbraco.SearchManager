@@ -63,11 +63,11 @@ internal sealed class RebuildHistoryRepository(IScopeProvider scopeProvider) : I
 
     /// <inheritdoc />
     /// <remarks>
-    /// Reads the whole table and picks the newest row per index in memory: pruning caps it at
-    /// <see cref="IRebuildHistory.RunsKeptPerIndex"/> rows per index, and this avoids SQL that
-    /// differs between SQL Server and SQLite.
+    /// Reads the whole table and picks the newest row per index in memory (filtering by server
+    /// there too): pruning caps it at <see cref="IRebuildHistory.RunsKeptPerIndex"/> rows per
+    /// index, and this avoids SQL that differs between SQL Server and SQLite.
     /// </remarks>
-    public IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex()
+    public IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex(string? server = null)
     {
         using IScope scope = scopeProvider.CreateScope();
         List<RebuildHistoryDto> rows = scope.Database.Fetch<RebuildHistoryDto>(
@@ -76,7 +76,11 @@ internal sealed class RebuildHistoryRepository(IScopeProvider scopeProvider) : I
         scope.Complete();
         return
         [
-            .. rows.GroupBy(row => row.IndexName, StringComparer.OrdinalIgnoreCase)
+            .. rows.Where(row =>
+                    server is null
+                    || string.Equals(row.Server, server, StringComparison.OrdinalIgnoreCase)
+                )
+                .GroupBy(row => row.IndexName, StringComparer.OrdinalIgnoreCase)
                 .Select(group => ToEntry(group.MaxBy(row => row.Id)!)),
         ];
     }

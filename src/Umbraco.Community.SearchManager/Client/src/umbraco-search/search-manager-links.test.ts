@@ -17,6 +17,32 @@ describe("searchManagerViewPath", () => {
       "section/settings/workspace/search-manager/view/explore?index=Umb_Content",
     );
   });
+
+  it("appends extra query parameters after the index", () => {
+    expect(searchManagerViewPath("diagnose", "ExternalIndex", { tool: "fields" })).toBe(
+      "section/settings/workspace/search-manager/view/diagnose?index=ExternalIndex&tool=fields",
+    );
+  });
+
+  it("keeps the named index when the extras carry another", () => {
+    expect(searchManagerViewPath("explore", "ExternalIndex", new URLSearchParams("index=Other&page=2"))).toBe(
+      "section/settings/workspace/search-manager/view/explore?index=ExternalIndex&page=2",
+    );
+  });
+});
+
+describe("searchManagerViewPath without an index", () => {
+  it("writes only the extra parameters", () => {
+    expect(searchManagerViewPath("diagnose", undefined, { tool: "node" })).toBe(
+      "section/settings/workspace/search-manager/view/diagnose?tool=node",
+    );
+  });
+
+  it("writes no query string when there is nothing to write", () => {
+    expect(searchManagerViewPath("diagnose", undefined)).toBe(
+      "section/settings/workspace/search-manager/view/diagnose",
+    );
+  });
 });
 
 describe("indexFromQuery", () => {

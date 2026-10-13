@@ -63,10 +63,43 @@ grown or shrunk since then finishes above or below 100%.
 
 Every rebuild Search Manager runs is recorded when it finishes, in the
 `searchManagerRebuildHistory` table that the package adds on first start. Each index keeps its
-newest 20 runs. Rebuilds of Umbraco Search indexes started elsewhere are recorded as
-**Started outside Search Manager**, without document counts. Core Examine rebuilds started
-elsewhere, for example at startup or from the core dashboard, are not recorded, because Umbraco
-offers no way to observe them.
+newest 20 runs.
+
+Rebuilds started elsewhere are recorded too:
+
+- **Core Examine indexes.** Every core rebuild goes through Umbraco's index rebuilder, and Search
+  Manager wraps it. Umbraco's own rebuild of empty indexes about a minute after the site starts
+  (of every index after a cold boot) is recorded as **At startup**. Rebuilds from the core
+  Examine dashboard, a language change or another package are recorded as **Started outside
+  Search Manager**. Both carry the document counts before and after, and a failure with its error.
+  A startup rebuild of an index with nothing to index, such as `MembersIndex` on a site without
+  members, is not recorded unless it fails: Umbraco repeats it on every start.
+- **Umbraco Search indexes.** Rebuilds started from Umbraco Search's own index page, by a content
+  type change or on another server are recorded as **Started outside Search Manager**, always as
+  succeeded and without document counts, because Umbraco Search does not announce failures.
+
+Each server records the core Examine rebuilds it runs itself. A rebuild on another server of a
+load-balanced site appears with that server's name, and only that server's own copy changed.
+
+### Incomplete indexes
+
+A core Examine rebuild clears the index first, so a rebuild that fails part-way leaves it holding
+only some documents. Search Manager shows such an index as **Incomplete**, with the number of
+documents the failed rebuild left and its error, until a later rebuild on the same server
+succeeds. A rebuild that was refused before it started, for example because the index was already
+rebuilding, changes nothing and does not make the index Incomplete.
+
+Limitations:
+
+- If another package replaces Umbraco's index rebuilder after Search Manager has wrapped it,
+  rebuilds started outside Search Manager are not recorded. A warning in the log says so at
+  startup.
+- A failed rebuild from the core Examine dashboard (on Umbraco 17.0 to 17.2, any failed core
+  rebuild) shows **Rebuilding** for up to five minutes before it shows **Incomplete**: Umbraco
+  keeps the failed operation marked as running until it expires, and refuses another rebuild of
+  the index until then.
+- On hosts where the machine name changes per instance, such as a scaled-out Azure App Service,
+  a failure recorded by an earlier instance does not mark the index Incomplete.
 
 ## Load-balanced sites
 

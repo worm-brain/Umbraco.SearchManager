@@ -157,6 +157,62 @@ public sealed class RebuildRunnerTests : IDisposable
         Assert.Equal(RebuildStatus.Succeeded, Assert.Single(_queue.GetRuns()).Status);
     }
 
+    [Fact]
+    public async Task RunAsync_SourceFailsPartWay_RecordsTheDocumentsLeftInTheIndex()
+    {
+        // Arrange
+        _source
+            .RebuildAsync("ProductIndex", Arg.Any<IProgress<long>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Price missing"));
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(60L, Assert.Single(_queue.GetRuns()).DocumentsAfter);
+    }
+
+    [Fact]
+    public async Task RunAsync_SourceRefuses_RecordsNoDocumentCount()
+    {
+        // Arrange
+        _source
+            .RebuildAsync("ProductIndex", Arg.Any<IProgress<long>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new RebuildRefusedException("Umbraco is already rebuilding this index"));
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        RebuildRun finished = Assert.Single(_queue.GetRuns());
+        Assert.Equal(
+            (RebuildStatus.Failed, (long?)null),
+            (finished.Status, finished.DocumentsAfter)
+        );
+    }
+
+    [Fact]
+    public async Task RunAsync_CountUnreadableAfterAFailure_RecordsTheFailureWithoutACount()
+    {
+        // Arrange
+        _source
+            .RebuildAsync("ProductIndex", Arg.Any<IProgress<long>>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Price missing"));
+        _registry
+            .GetIndexesAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Lock obtain timed out"));
+        RebuildRun run = Start("ProductIndex");
+
+        // Act
+        await Runner().RunAsync(run, TestContext.Current.CancellationToken);
+
+        // Assert
+        RebuildRun finished = Assert.Single(_queue.GetRuns());
+        Assert.Equal(("Price missing", (long?)null), (finished.Error, finished.DocumentsAfter));
+    }
+
     private RebuildRunner Runner() =>
         new(_queue, _registry, _history, NullLogger<RebuildRunner>.Instance);
 

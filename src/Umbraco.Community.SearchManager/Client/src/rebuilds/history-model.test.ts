@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RebuildHistoryEntry } from "../api/types.gen.js";
-import { agoParts, latestEntryByIndex } from "./history-model.js";
+import { agoParts, historyTriggerTerm, latestEntryByIndex } from "./history-model.js";
 
 const now = new Date("2026-10-12T12:00:00Z");
 
@@ -29,6 +29,27 @@ describe("agoParts", () => {
 
   it("gives seconds for a run that just ended, never a future time", () => {
     expect(agoParts("2026-10-12T12:00:05Z", now)).toEqual({ value: 0, unit: "second" });
+  });
+});
+
+describe("historyTriggerTerm", () => {
+  it("names the user of a Search Manager rebuild", () => {
+    expect(historyTriggerTerm({ trigger: "User", triggeredBy: "Jack" })).toEqual([
+      "searchManager_historyTriggerUser",
+      "Jack",
+    ]);
+  });
+
+  it("labels Umbraco's startup rebuild", () => {
+    expect(historyTriggerTerm({ trigger: "Startup" })).toEqual(["searchManager_historyTriggerStartup"]);
+  });
+
+  it("labels any other rebuild as started outside Search Manager", () => {
+    expect(historyTriggerTerm({ trigger: "Other" })).toEqual(["searchManager_historyTriggerOther"]);
+  });
+
+  it("falls back to outside Search Manager for a user entry with no name", () => {
+    expect(historyTriggerTerm({ trigger: "User", triggeredBy: null })).toEqual(["searchManager_historyTriggerOther"]);
   });
 });
 

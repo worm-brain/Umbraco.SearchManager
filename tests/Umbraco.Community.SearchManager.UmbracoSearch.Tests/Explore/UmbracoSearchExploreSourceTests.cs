@@ -41,6 +41,7 @@ public class UmbracoSearchExploreSourceTests
     private readonly IContentTypeService _contentTypes = Substitute.For<IContentTypeService>();
     private readonly IMediaTypeService _mediaTypes = Substitute.For<IMediaTypeService>();
     private readonly IMemberTypeService _memberTypes = Substitute.For<IMemberTypeService>();
+    private readonly ILanguageService _languages = Substitute.For<ILanguageService>();
     private readonly ExploreTarget _target;
     private readonly UmbracoSearchExploreSource _source;
 
@@ -76,7 +77,7 @@ public class UmbracoSearchExploreSourceTests
             _contentTypes,
             _mediaTypes,
             _memberTypes,
-            Substitute.For<ILanguageService>(),
+            _languages,
             new FakeTimeProvider(new DateTimeOffset(2026, 10, 12, 9, 0, 0, TimeSpan.Zero)),
             _searcherResolver,
             Substitute.For<IActiveIndexManager>()
@@ -104,6 +105,48 @@ public class UmbracoSearchExploreSourceTests
             (Alias, "umbraco-search", false, false),
             (target.Name, target.Engine, target.Capabilities.NativeQuery, target.IsMemberData)
         );
+    }
+
+    [Fact]
+    public async Task GetTargetsAsync_RegistrationWithASearcher_CannotExplainScores()
+    {
+        // Act
+        ExploreTarget target = Assert.Single(
+            await _source.GetTargetsAsync(TestContext.Current.CancellationToken)
+        );
+
+        // Assert
+        Assert.False(target.Capabilities.ExplainScore);
+    }
+
+    [Fact]
+    public async Task ExplainAsync_AnyRequest_IsNotSupported()
+    {
+        // Act
+        Task Explain() =>
+            _source.ExplainAsync(
+                _target,
+                new ExplainRequest([], null, null, [Home.ToString()]),
+                TestContext.Current.CancellationToken
+            );
+
+        // Assert
+        await Assert.ThrowsAsync<NotSupportedException>(Explain);
+    }
+
+    [Fact]
+    public async Task GetDefaultCultureAsync_SiteWithADefaultLanguage_ReturnsItsIsoCode()
+    {
+        // Arrange
+        _languages.GetDefaultIsoCodeAsync().Returns("en-US");
+
+        // Act
+        string? culture = await _source.GetDefaultCultureAsync(
+            TestContext.Current.CancellationToken
+        );
+
+        // Assert
+        Assert.Equal("en-US", culture);
     }
 
     [Fact]

@@ -58,9 +58,11 @@ information button in the **Actions** column to see the last 20 rebuilds of that
 started each one, how long it took, the document counts before and after, the server, and the
 error of a failure.
 
-Rebuilds of Umbraco Search indexes started elsewhere, for example from Umbraco Search's own index
-page, are recorded as **Started outside Search Manager**. Core Examine rebuilds started elsewhere,
-for example by the core dashboard or at startup, are not recorded.
+Rebuilds started elsewhere are recorded too. Umbraco's rebuild of empty indexes shortly after the
+site starts shows as **At startup**. Rebuilds from the core Examine dashboard, from Umbraco
+Search's own index page, or from another package show as **Started outside Search Manager**. A
+core Examine rebuild on another server of a load-balanced site is recorded by that server, with
+its name.
 
 ## Troubleshooting
 
@@ -72,6 +74,9 @@ for example by the core dashboard or at startup, are not recorded.
   [Load-balanced sites](../explanation/how-rebuilds-work.md#load-balanced-sites).
 - **The site restarted during a rebuild.** The queue lives in memory, so queued runs are lost and
   the running one is recorded as failed. Start them again.
+- **An index shows Incomplete.** Its last rebuild on this server failed part-way, so it holds only
+  some documents. Fix the error shown under the label, usually in a populator, then rebuild it.
+  See [Incomplete indexes](../explanation/how-rebuilds-work.md#incomplete-indexes).
 
 ## Related
 

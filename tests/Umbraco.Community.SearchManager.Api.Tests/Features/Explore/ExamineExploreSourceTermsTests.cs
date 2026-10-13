@@ -254,6 +254,120 @@ public sealed class ExamineExploreSourceTermsTests : IDisposable
     /// <inheritdoc />
     public void Dispose() => _index.Dispose();
 
+    [Fact]
+    public async Task GetFacetsAsync_IncludeChipOnTheField_StillCountsTheFieldsOtherValues()
+    {
+        // Act
+        FacetsResult facets = await FacetsAsync(
+            [new Filter(FilterKind.Field, "type", FilterOperator.Is, "product")],
+            "type"
+        );
+
+        // Assert
+        Assert.Equal(
+            ["product:2", "blogpost:1", "contentpage:1", "home:1"],
+            Single(facets).Values.Select(value => $"{value.Value}:{value.Count}")
+        );
+    }
+
+    [Fact]
+    public async Task GetFacetsAsync_IncludeChipOnTheField_TotalIsStillTheResults()
+    {
+        // Act
+        FacetsResult facets = await FacetsAsync(
+            [new Filter(FilterKind.Field, "type", FilterOperator.Is, "product")],
+            "type"
+        );
+
+        // Assert
+        Assert.Equal(2L, facets.Total);
+    }
+
+    [Fact]
+    public async Task GetFacetsAsync_ExcludeChipOnTheField_KeepsTheValueOut()
+    {
+        // Act
+        FacetsResult facets = await FacetsAsync(
+            [new Filter(FilterKind.Field, "type", FilterOperator.Is, "product", Exclude: true)],
+            "type"
+        );
+
+        // Assert
+        Assert.DoesNotContain(Single(facets).Values, value => value.Value == "product");
+    }
+
+    [Fact]
+    public async Task GetFacetsAsync_ChipOnAnotherField_StillNarrowsTheCounts()
+    {
+        // Act
+        FacetsResult facets = await _source.GetFacetsAsync(
+            _target,
+            new FacetsQuery(
+                [
+                    new Filter(FilterKind.Field, "type", FilterOperator.Is, "product"),
+                    new Filter(FilterKind.Field, "level", FilterOperator.Equals, "3"),
+                ],
+                null,
+                ["type", "level"]
+            ),
+            TestContext.Current.CancellationToken
+        );
+
+        // Assert: type counts under level=3 only; level counts under type=product only.
+        Assert.Equal(
+            "contentpage:1,product:1 | 3:1,4:1",
+            string.Join(
+                " | ",
+                facets.Fields.Select(facet =>
+                    string.Join(",", facet.Values.Select(value => $"{value.Value}:{value.Count}"))
+                )
+            )
+        );
+    }
+
+    [Fact]
+    public async Task GetTermsAsync_LowerCasedKeyword_CarriesTheValueAsWritten()
+    {
+        // Act
+        TermCount blogPost = (await TermsAsync("type", "blog"))!.Terms.Single();
+
+        // Assert
+        Assert.Equal(("blogpost", "blogPost"), (blogPost.Value, blogPost.Display));
+    }
+
+    [Fact]
+    public async Task GetTermsAsync_KeywordWrittenInLowerCase_HasNoDisplay()
+    {
+        // Act
+        TermCount product = (await TermsAsync("type", "product"))!.Terms.Single();
+
+        // Assert
+        Assert.Null(product.Display);
+    }
+
+    [Fact]
+    public async Task GetTermsAsync_TextField_KeepsTheTermWithoutDisplay()
+    {
+        // Act: "Getting started" is stored whole, so no stored value equals the term.
+        TermCount getting = (await TermsAsync("nodeName", "gett"))!.Terms.Single();
+
+        // Assert
+        Assert.Equal(("getting", (string?)null), (getting.Value, getting.Display));
+    }
+
+    [Fact]
+    public async Task GetFacetsAsync_LowerCasedKeyword_CarriesTheValueAsWritten()
+    {
+        // Act
+        FacetsResult facets = await FacetsAsync([], "type");
+
+        // Assert
+        Assert.Equal(
+            "blogPost",
+            Single(facets).Values.Single(value => value.Value == "blogpost").Display
+        );
+    }
+
     private Task<TermsResult?> TermsAsync(string field, string prefix) =>
         _source.GetTermsAsync(_target, field, prefix, 10, TestContext.Current.CancellationToken);
 

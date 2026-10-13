@@ -50,7 +50,7 @@ public sealed class ExamineExploreSourceTargetsTests : IDisposable
                 ExploreTargetKind.Index,
                 "Published content and media",
                 false,
-                new ExploreCapabilities(true, true)
+                new ExploreCapabilities(true, true, true)
             ),
             target
         );

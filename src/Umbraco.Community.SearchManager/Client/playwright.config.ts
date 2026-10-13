@@ -30,13 +30,21 @@ export default defineConfig<E2eOptions>({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  // One project per site; each test gets a logged-in page from e2e/support/test.ts.
-  projects: sites.map((site): PlaywrightTestProject<E2eOptions> => ({
-    name: site.name,
-    testMatch: /\.spec\.ts$/,
-    testIgnore: site.umbracoSearch ? [] : [/\.umbraco-search\.spec\.ts$/],
-    use: { site, baseURL: site.baseURL },
-  })),
+  // One project per site; each test gets a logged-in page from e2e/support/test.ts. An Umbraco
+  // Search site first runs its setup project, which fills its Umbraco Search indexes
+  // (e2e/umbraco-search.setup.ts).
+  projects: sites.flatMap((site): Array<PlaywrightTestProject<E2eOptions>> => [
+    ...(site.umbracoSearch
+      ? [{ name: `${site.name}-setup`, testMatch: /umbraco-search\.setup\.ts$/, use: { site, baseURL: site.baseURL } }]
+      : []),
+    {
+      name: site.name,
+      testMatch: /\.spec\.ts$/,
+      testIgnore: site.umbracoSearch ? [] : [/\.umbraco-search\.spec\.ts$/],
+      dependencies: site.umbracoSearch ? [`${site.name}-setup`] : [],
+      use: { site, baseURL: site.baseURL },
+    },
+  ]),
   webServer: sites.map((site) => ({
     // --no-build: e2e/prepare.ts has built the client and the site, in that order.
     command: `dotnet run --no-build --no-launch-profile -p:UmbracoMajor=${site.major} --urls https://localhost:${site.port}`,

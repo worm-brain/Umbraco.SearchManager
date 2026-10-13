@@ -70,6 +70,9 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 - **Show query** shows the Lucene your chips send, the query as Lucene parsed it, and C# with
   Examine that runs the same search, each with **Copy**.
   [Use raw Lucene](docs/how-to/use-raw-lucene.md)
+- **Explain a score.** See why a result scored as it did, in plain words: which words matched,
+  how often, how rare they are, and what the filters added. Tick two results to compare their
+  scores part by part. [Search an index](docs/how-to/search-an-index.md#explain-a-score)
 - **Raw Lucene mode** checks the query as you type, marks where it fails to parse, and offers
   one-click fixes for common mistakes such as a lower-case `and` or a date without a range.
   **Back to filters** turns the query into chips again.
@@ -82,9 +85,18 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 - Umbraco Search's own index page gets a **Search Manager** box with the last rebuild and links
   to Explore and the index's history.
 
-### Coming next
+**Diagnose why a page is not found**
 
-- **Diagnose:** field statistics, analyzers and where a page is indexed.
+- **Field statistics** for every field of an index: coverage, documents missing it, distinct
+  terms, the most common terms and the analyzer. Click a term or a missing count to search for
+  it in Explore. [Read field statistics](docs/how-to/read-field-statistics.md)
+- **Find a node:** look a page up by name, id or key and see which indexes hold it, why the
+  others do not, and whether a copy is out of date. Then test a search against it chip by chip.
+  The content tree's **Show in search indexes** action opens the same answer from the page.
+  [Find where a page is indexed](docs/how-to/find-where-a-page-is-indexed.md)
+- **Analyzer:** run a text through two indexes' analyzers side by side, step by step, and see
+  whether a visitor's search finds it, judged with the engine's own query.
+  [See how an index analyzes text](docs/how-to/see-how-an-index-analyzes-text.md)
 
 ## A quick tour
 

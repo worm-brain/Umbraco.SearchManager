@@ -36,8 +36,8 @@ See [Check index health](check-index-health.md) and [Rebuild indexes](rebuild-in
 Choose the index in **Explore** as usual. The chips run through Umbraco Search's own search, not
 raw Lucene, so a few things differ:
 
-- **Pick a culture.** Without one, Umbraco Search finds only documents that do not vary by
-  culture.
+- **The culture starts on the default language.** Without one, Umbraco Search finds only
+  documents that do not vary by culture; choose **No culture (invariant content only)** for those.
 - **Words** become the search query. Text, keyword, number and date chips become typed filters,
   and excluded chips negate them.
 - **A document type chip** shows the alias, and sends the document type's key.
@@ -46,18 +46,34 @@ raw Lucene, so a few things differ:
   many filters were not sent.
 - **Show query** shows the Umbraco Search request in C#.
 - **The drawer** shows the stored fields when the index uses the Examine provider.
-- **Raw Lucene mode** is not available.
+- **Raw Lucene mode** and **Explain score** are not available: Umbraco Search returns no scores.
 
 ![Explore on Umb_PublishedContent with the en-US culture, an "umbraco" chip and a struck-through phrase chip that was not sent](../images/explore-umbraco-search.png)
 
 The short names differ from the core indexes: `type`, `kind`, `name`, `updated`, `created`, `key`,
 `parent`, `path`, `level` and `sort`. See the [search syntax](../reference/search-syntax.md#short-names).
 
+## Field statistics
+
+With the Examine provider, **Diagnose > Fields** reads the index copy search is using. Umbraco
+Search keeps one document per culture, so the counts are culture documents; fields are shown
+under the names filters take, and links into Explore pick the default culture. See
+[Read field statistics](read-field-statistics.md#umbraco-search-indexes).
+
+## Find a node
+
+**Diagnose > Find a node** checks Umbraco Search indexes too. A variant page has one document
+per culture, so the table lists the cultures each index holds. With the Examine provider the
+documents are read from the index copy search is using, and a copy older than the page is marked
+**Stale**; other providers are asked through Umbraco Search's own search and cannot say whether
+their copy is out of date. Testing a search sends the same request Explore would, restricted to
+the page.
+
 ## The box on Umbraco Search's index page
 
 Umbraco Search's own index page, under **Settings > Search**, gets a **Search Manager** box with
-the last rebuild, the runs before it and the field count. Its buttons open **Explore** and
-**History** for that index in Search Manager.
+the last rebuild, the runs before it and the field count. Its buttons open **Explore**,
+**Field statistics** and **History** for that index in Search Manager.
 
 ![Umbraco Search's page for Umb_PublishedContent, with the Search Manager box under Index Information](../images/umbraco-search-box.png)
 

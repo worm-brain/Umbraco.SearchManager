@@ -1,6 +1,8 @@
 /**
  * Builds what the e2e sites serve before Playwright starts them: the client bundle (the sites serve
- * the RCL's wwwroot, which `bun run build` writes) and then each selected site.
+ * the RCL's wwwroot, which `bun run build` writes) and then each selected site. Then gives each
+ * site with no database its first boot (install, sample content, indexing), retried on a fresh
+ * database if it stalls (`support/seed-sites.ts`).
  *
  * Running this before the sites start also covers the fresh-clone gotcha: a site discovers its
  * static web asset folders at start-up, so it must start after the first client build.
@@ -10,6 +12,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { seedSites } from "./support/seed-sites.js";
 import { repoRoot, sites } from "./support/sites.js";
 
 function run(command: string, args: Array<string>, cwd: string): void {
@@ -25,4 +28,5 @@ if (process.env.E2E_SKIP_BUILD === "1") {
   for (const site of sites) {
     run("dotnet", ["build", site.projectDir, `-p:UmbracoMajor=${site.major}`], repoRoot);
   }
+  await seedSites(sites);
 }

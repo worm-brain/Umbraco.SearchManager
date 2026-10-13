@@ -16,8 +16,9 @@ tutorial.
 
 ## Tutorial
 
-- [Find out why a page is missing from search](tutorials/find-a-missing-page.md): look a page up
-  in two indexes, read its stored fields, and rebuild the index if it is out of date.
+- [Find out why a page is missing from search](tutorials/find-a-missing-page.md): find a page in
+  every index, read why it is missing, test the search against it, and rebuild the index if it is
+  out of date.
 
 ## How-to guides
 
@@ -28,6 +29,12 @@ tutorial.
 - [Search an index](how-to/search-an-index.md): chips, suggestions, the fields panel, the
   document drawer, columns and cultures.
 - [Use raw Lucene](how-to/use-raw-lucene.md): Show query, raw Lucene mode and its fixes.
+- [Read field statistics](how-to/read-field-statistics.md): coverage, distinct and top terms and
+  the analyzer of every field, with links into Explore.
+- [Find where a page is indexed](how-to/find-where-a-page-is-indexed.md): which indexes hold a
+  page and why the others do not, and which part of a search misses it.
+- [See how an index analyzes text](how-to/see-how-an-index-analyzes-text.md): an index's
+  analyzer step by step, side by side with another, and whether a search finds the text.
 - [Use it with Umbraco Search](how-to/use-with-umbraco-search.md): the adapter package, what it
   adds and what Explore can send.
 - [Keep the core Examine dashboard](how-to/keep-the-core-examine-dashboard.md): show both tools

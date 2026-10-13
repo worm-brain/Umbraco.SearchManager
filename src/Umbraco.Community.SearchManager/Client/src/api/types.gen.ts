@@ -4,6 +4,66 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:44382' | (string & {});
 };
 
+export type AnalysisResult = {
+    target: ExploreTarget;
+    available: boolean;
+    unavailableReason?: string | null;
+    field: string;
+    analyzer?: string | null;
+    stagesShown: boolean;
+    stagesNote?: string | null;
+    stages: Array<AnalysisStage>;
+    search?: SearchTermResult | null;
+    searchUnavailableReason?: string | null;
+    truncated: boolean;
+};
+
+export type AnalysisStage = {
+    name: string;
+    detail?: string | null;
+    tokens: Array<AnalysisToken>;
+};
+
+export type AnalysisToken = {
+    text: string;
+    position: number;
+    startOffset: number;
+    endOffset: number;
+    state: TokenState;
+    match: TokenMatch;
+};
+
+export type AnalyzeRequest = {
+    field: string;
+    text: string;
+    searchTerm?: string | null;
+};
+
+export type AnalyzerField = {
+    name: string;
+    label?: string | null;
+    type: FieldType;
+    group: FieldGroup;
+    analyzer: string;
+    physical?: string | null;
+};
+
+export type AnalyzerFieldsResult = {
+    target: ExploreTarget;
+    available: boolean;
+    unavailableReason?: string | null;
+    defaultField?: string | null;
+    fields: Array<AnalyzerField>;
+};
+
+export type ClauseMatch = {
+    index: number;
+    matched?: boolean | null;
+    skippedReason?: string | null;
+    field?: string | null;
+    nodeValues: Array<string>;
+};
+
 export type CompileRequest = {
     filters: Array<Filter>;
     culture?: string | null;
@@ -19,14 +79,61 @@ export type CompiledQuery = {
     skipped: Array<SkippedFilter>;
 };
 
+export type DocumentExplanation = {
+    id: string;
+    found: boolean;
+    matched: boolean;
+    score?: number | null;
+    root?: ExplainNode | null;
+    mustNotMatch: Array<number>;
+};
+
 export type EnqueueResult = {
     queued: Array<RebuildRun>;
     refused: Array<RebuildRefusal>;
 };
 
+export type ExplainFactors = {
+    freq?: number | null;
+    tf?: number | null;
+    idf?: number | null;
+    docFreq?: number | null;
+    maxDocs?: number | null;
+    fieldNorm?: number | null;
+    queryNorm?: number | null;
+    boost?: number | null;
+    matched?: number | null;
+    of?: number | null;
+};
+
+export type ExplainNode = {
+    kind: ExplainNodeKind;
+    value: number;
+    field?: string | null;
+    term?: string | null;
+    factors?: ExplainFactors | null;
+    filterIndex?: number | null;
+    description: string;
+    children: Array<ExplainNode>;
+};
+
+export type ExplainNodeKind = 'Sum' | 'Coord' | 'TermMatch' | 'PhraseMatch' | 'Constant' | 'MatchAll' | 'Filter' | 'NoMatch' | 'Other';
+
+export type ExplainRequest = {
+    filters: Array<Filter>;
+    culture?: string | null;
+    native?: string | null;
+    ids: Array<string>;
+};
+
+export type ExplainResult = {
+    documents: Array<DocumentExplanation>;
+};
+
 export type ExploreCapabilities = {
     nativeQuery: boolean;
     termStatistics: boolean;
+    explainScore: boolean;
 };
 
 export type ExploreHit = {
@@ -67,6 +174,7 @@ export type ExploreSchema = {
     cultures: Array<string>;
     documentCount?: number | null;
     unsupported: Array<UnsupportedFilter>;
+    defaultCulture?: string | null;
 };
 
 export type ExploreTarget = {
@@ -93,6 +201,12 @@ export type FacetsResult = {
     fields: Array<FieldFacet>;
 };
 
+export type FailedRebuildSummary = {
+    endedAt: string;
+    error?: string | null;
+    documentsWritten?: number | null;
+};
+
 export type FieldAlias = {
     alias: string;
     field: string;
@@ -104,6 +218,38 @@ export type FieldFacet = {
     type: FieldType;
     values: Array<TermCount>;
     sampled: boolean;
+};
+
+export type FieldGroup = 'Field' | 'CultureVariant' | 'RawCopy' | 'Segment' | 'System';
+
+export type FieldStatistic = {
+    name: string;
+    label?: string | null;
+    type: FieldType;
+    group: FieldGroup;
+    culture?: string | null;
+    analyzer?: string | null;
+    documents?: number | null;
+    missing?: number | null;
+    uniqueTerms?: number | null;
+    uniqueTermsSampled: boolean;
+    topTerms: Array<TermCount>;
+    analyzedTerms: boolean;
+    range?: ValueRange | null;
+    storedOnly: boolean;
+    physical?: string | null;
+};
+
+export type FieldStatisticsResult = {
+    target: ExploreTarget;
+    available: boolean;
+    unavailableReason?: string | null;
+    documentCount: number;
+    deletedDocumentCount?: number | null;
+    coverageExact: boolean;
+    documentsPerCulture: boolean;
+    exploreCulture?: string | null;
+    fields: Array<FieldStatistic>;
 };
 
 export type FieldType = 'Text' | 'Keyword' | 'Number' | 'Date';
@@ -140,6 +286,21 @@ export type IndexField = {
 
 export type IndexHealth = 'Healthy' | 'Rebuilding' | 'Unhealthy' | 'Corrupted' | 'Empty' | 'Incomplete' | 'Unknown';
 
+export type IndexPresence = {
+    target: string;
+    engine: string;
+    status: PresenceStatus;
+    documentCount: number;
+    cultures: Array<string>;
+    reason?: string | null;
+    stale?: boolean | null;
+    indexUpdateDate?: string | null;
+    expectedUpdateDate?: string | null;
+    viewFilter?: Filter | null;
+    viewDocumentId?: string | null;
+    viewCulture?: string | null;
+};
+
 export type IndexSummary = {
     name: string;
     engine: string;
@@ -157,6 +318,7 @@ export type IndexSummary = {
     properties: {
         [key: string]: string;
     };
+    failedRebuild?: FailedRebuildSummary | null;
 };
 
 export type NativeRequest = {
@@ -178,6 +340,54 @@ export type NativeWarning = {
     replacement?: string | null;
 };
 
+export type NodeCandidate = {
+    id: number;
+    key: string;
+    name: string;
+    icon?: string | null;
+    trashed: boolean;
+};
+
+export type NodeCulture = {
+    iso: string;
+    published: boolean;
+    draft: boolean;
+    updateDate?: string | null;
+    publishDate?: string | null;
+};
+
+export type NodeFacts = {
+    id: number;
+    key: string;
+    name: string;
+    entityType: string;
+    contentTypeAlias: string;
+    path: string;
+    published: boolean;
+    trashed: boolean;
+    protected: boolean;
+    updateDate: string;
+    publishDate?: string | null;
+    cultures: Array<NodeCulture>;
+};
+
+export type NodeMatchRequest = {
+    filters: Array<Filter>;
+    culture?: string | null;
+};
+
+export type NodeMatchResult = {
+    inIndex: boolean;
+    matches: boolean;
+    query: string;
+    clauses: Array<ClauseMatch>;
+};
+
+export type NodePresenceResult = {
+    node: NodeFacts;
+    indexes: Array<IndexPresence>;
+};
+
 export type ParseFallback = {
     code: string;
     message: string;
@@ -191,6 +401,8 @@ export type ParseResult = {
     filters: Array<Filter>;
     fallback?: ParseFallback | null;
 };
+
+export type PresenceStatus = 'Present' | 'Missing' | 'NotApplicable';
 
 export type ProblemDetails = {
     type?: string | null;
@@ -249,10 +461,25 @@ export type RebuildRun = {
 
 export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled';
 
-export type RebuildTrigger = 'User' | 'Other';
+export type RebuildTrigger = 'User' | 'Other' | 'Startup';
 
 export type SearchManagerSettings = {
     hideCoreExamineDashboard: boolean;
+};
+
+export type SearchTermPart = {
+    kind: SearchTermPartKind;
+    text: string;
+    required: boolean;
+    group: number;
+};
+
+export type SearchTermPartKind = 'Word' | 'Prefix' | 'Wildcard' | 'Phrase' | 'Fuzzy' | 'Other';
+
+export type SearchTermResult = {
+    matches: boolean;
+    parts: Array<SearchTermPart>;
+    notes: Array<string>;
 };
 
 export type ServerInfo = {
@@ -272,6 +499,7 @@ export type SkippedFilter = {
 export type TermCount = {
     value: string;
     count: number;
+    display?: string | null;
 };
 
 export type TermsResult = {
@@ -281,6 +509,10 @@ export type TermsResult = {
     sampled: boolean;
 };
 
+export type TokenMatch = 'None' | 'Exact' | 'Prefix' | 'Pattern';
+
+export type TokenState = 'Kept' | 'Changed' | 'Removed' | 'Added';
+
 export type UnsupportedFilter = {
     kind: FilterKind;
     types: Array<FieldType>;
@@ -288,6 +520,231 @@ export type UnsupportedFilter = {
     exclude?: boolean | null;
     reason: string;
 };
+
+export type ValueRange = {
+    min: string;
+    max: string;
+};
+
+export type AnalyzeData = {
+    body?: AnalyzeRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer';
+};
+
+export type AnalyzeErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type AnalyzeError = AnalyzeErrors[keyof AnalyzeErrors];
+
+export type AnalyzeResponses = {
+    /**
+     * OK
+     */
+    200: AnalysisResult;
+};
+
+export type AnalyzeResponse = AnalyzeResponses[keyof AnalyzeResponses];
+
+export type GetAnalyzerFieldsData = {
+    body?: never;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer/fields';
+};
+
+export type GetAnalyzerFieldsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetAnalyzerFieldsError = GetAnalyzerFieldsErrors[keyof GetAnalyzerFieldsErrors];
+
+export type GetAnalyzerFieldsResponses = {
+    /**
+     * OK
+     */
+    200: AnalyzerFieldsResult;
+};
+
+export type GetAnalyzerFieldsResponse = GetAnalyzerFieldsResponses[keyof GetAnalyzerFieldsResponses];
+
+export type GetFieldStatisticsData = {
+    body?: never;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/fields';
+};
+
+export type GetFieldStatisticsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetFieldStatisticsError = GetFieldStatisticsErrors[keyof GetFieldStatisticsErrors];
+
+export type GetFieldStatisticsResponses = {
+    /**
+     * OK
+     */
+    200: FieldStatisticsResult;
+};
+
+export type GetFieldStatisticsResponse = GetFieldStatisticsResponses[keyof GetFieldStatisticsResponses];
+
+export type MatchNodeData = {
+    body?: NodeMatchRequest;
+    path: {
+        target: string;
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/nodes/{key}/match';
+};
+
+export type MatchNodeErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type MatchNodeError = MatchNodeErrors[keyof MatchNodeErrors];
+
+export type MatchNodeResponses = {
+    /**
+     * OK
+     */
+    200: NodeMatchResult;
+};
+
+export type MatchNodeResponse = MatchNodeResponses[keyof MatchNodeResponses];
+
+export type FindNodesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        query?: string;
+        take?: number;
+    };
+    url: '/umbraco/search-manager/api/v1/diagnose/nodes';
+};
+
+export type FindNodesErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+};
+
+export type FindNodesError = FindNodesErrors[keyof FindNodesErrors];
+
+export type FindNodesResponses = {
+    /**
+     * OK
+     */
+    200: Array<NodeCandidate>;
+};
+
+export type FindNodesResponse = FindNodesResponses[keyof FindNodesResponses];
+
+export type GetNodePresenceData = {
+    body?: never;
+    path: {
+        key: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/nodes/{key}';
+};
+
+export type GetNodePresenceErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetNodePresenceError = GetNodePresenceErrors[keyof GetNodePresenceErrors];
+
+export type GetNodePresenceResponses = {
+    /**
+     * OK
+     */
+    200: NodePresenceResult;
+};
+
+export type GetNodePresenceResponse = GetNodePresenceResponses[keyof GetNodePresenceResponses];
 
 export type CompileExploreData = {
     body?: CompileRequest;
@@ -327,6 +784,45 @@ export type CompileExploreResponses = {
 };
 
 export type CompileExploreResponse = CompileExploreResponses[keyof CompileExploreResponses];
+
+export type ExplainExploreData = {
+    body?: ExplainRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/explore/{target}/explain';
+};
+
+export type ExplainExploreErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type ExplainExploreError = ExplainExploreErrors[keyof ExplainExploreErrors];
+
+export type ExplainExploreResponses = {
+    /**
+     * OK
+     */
+    200: ExplainResult;
+};
+
+export type ExplainExploreResponse = ExplainExploreResponses[keyof ExplainExploreResponses];
 
 export type GetExploreFacetsData = {
     body?: FacetsQuery;

@@ -35,7 +35,8 @@ import "./filter-chip.element.js";
  *   dates). Arrow keys move, Enter picks the highlighted row (Enter with none highlighted parses
  *   the text), Escape closes the list.
  * - **Backspace** in an empty input removes the last chip; **Escape** clears the input.
- * - **Chips** open their editor on click; a chip the target cannot run is drawn disabled.
+ * - **Chips** open their editor on click; a chip the target cannot run, or the server skipped
+ *   ({@link reasons}), is drawn disabled with the reason.
  *
  * The box does not own the chips: every change is a {@link SearchManagerFiltersChangeEvent}
  * that the Explore view applies and passes back down.
@@ -56,6 +57,14 @@ export class SearchManagerSearchBoxElement extends UmbLitElement {
   /** The chips. */
   @property({ attribute: false })
   filters: Array<Filter> = [];
+
+  /**
+   * Why each chip does not run, by chip index, from `chipReasons`: the client's reasons plus
+   * the ones the server gave for chips it skipped. When an entry is missing the box falls back
+   * to the client's own check.
+   */
+  @property({ attribute: false })
+  reasons: ReadonlyArray<string | undefined> = [];
 
   /** The text in the input. */
   @state()
@@ -282,7 +291,7 @@ export class SearchManagerSearchBoxElement extends UmbLitElement {
                 <search-manager-filter-chip
                   .filter=${filter}
                   .schema=${this.schema}
-                  .disabledReason=${disabledReason(filter, this.schema, this.target, term) ?? ""}
+                  .disabledReason=${this.reasons[index] ?? disabledReason(filter, this.schema, this.target, term) ?? ""}
                   @search-manager-chip-change=${(event: SearchManagerChipChangeEvent) => {
                     event.stopPropagation();
                     this.#emit(replaceFilterAt(this.filters, index, event.filter));

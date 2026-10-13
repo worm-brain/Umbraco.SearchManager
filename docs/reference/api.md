@@ -18,7 +18,7 @@ Settings access, and request a token with the client credentials flow from
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /indexes` | Lists every index with its engine, health, health message, document, deleted document and field counts, size, and what it supports (rebuild, search, raw Lucene). |
+| `GET /indexes` | Lists every index with its engine, health, health message, document, deleted document and field counts, size, and what it supports (rebuild, search, raw Lucene). An `Incomplete` index also has `failedRebuild`: when the failed rebuild ended, its error, and the documents it left. |
 | `GET /server` | Names this server, its role, and whether the site runs on more than one server. |
 | `GET /settings` | The settings the backoffice needs, currently `hideCoreExamineDashboard`. |
 
@@ -35,6 +35,10 @@ Settings access, and request a token with the client credentials flow from
 
 A run is `Queued`, `Running`, `Succeeded`, `Failed` or `Cancelled`. A core Examine run is
 `Succeeded` only once every document is committed and searchable.
+
+A history entry's `trigger` is `User` (from Search Manager, with `triggeredBy`), `Startup`
+(Umbraco's rebuild of empty core Examine indexes after the site starts) or `Other` (anything else
+outside Search Manager).
 
 ## Explore
 
@@ -53,6 +57,20 @@ A run is `Queued`, `Running`, `Succeeded`, `Failed` or `Cancelled`. A core Exami
 | `POST /explore/{target}/read-native` | Turns a raw Lucene query back into filters. |
 
 The Swagger UI shows the full request and response schemas.
+
+## Diagnose
+
+`{target}` is an index name, as listed by `GET /explore/targets`. Member indexes need Members
+section access, as in Explore.
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /diagnose/{target}/fields` | Every field's type, analyzer, coverage, distinct terms and top terms (dates: the range). An index without statistics answers with `available: false` and the reason. |
+| `GET /diagnose/{target}/analyzer/fields` | The text and keyword fields whose analyzer can be run, with each field's analyzer and the field to pick first. An index that cannot be analyzed answers with `available: false` and the reason. |
+| `POST /diagnose/{target}/analyzer` | Runs text through a field's analyzer and returns every stage's tokens (kept, changed, removed, added) and, for a search term, whether the engine's own query finds the text and what it looks for. Body: `{ "field": "nodeName", "text": "...", "searchTerm": "cafe" }`; text up to 2,000 characters, search up to 200. |
+| `GET /diagnose/nodes?query=&take=10` | Documents by name, id or key, for "Find a node". |
+| `GET /diagnose/nodes/{key}` | A document's facts and, for every index you can see, whether it holds the document, why not, and whether its copy is stale. |
+| `POST /diagnose/{target}/nodes/{key}/match` | Tests filters against a document: whether the whole query finds it and, per filter, whether it matches and the document's values. Body: `{ "filters": [...], "culture": "en-US" }`. |
 
 ## Live updates
 

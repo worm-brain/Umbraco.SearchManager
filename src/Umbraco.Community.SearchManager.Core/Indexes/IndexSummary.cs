@@ -60,6 +60,9 @@ public sealed record IndexCapabilities(
 /// <param name="ZeroDowntime">Whether a rebuild builds a fresh copy and swaps it in, so search keeps working.</param>
 /// <param name="IsMemberIndex">Whether the index holds member data, which needs Members section access.</param>
 /// <param name="Properties">The provider's own settings (analyzer, directory, ...), shown in the details panel.</param>
+/// <param name="FailedRebuild">
+/// The failed rebuild that left the index <see cref="IndexHealth.Incomplete"/>; null for any other health.
+/// </param>
 public sealed record IndexSummary(
     string Name,
     string Engine,
@@ -74,5 +77,16 @@ public sealed record IndexSummary(
     string? RebuildUnavailableReason,
     bool ZeroDowntime,
     bool IsMemberIndex,
-    IReadOnlyDictionary<string, string> Properties
+    IReadOnlyDictionary<string, string> Properties,
+    FailedRebuildSummary? FailedRebuild = null
+);
+
+/// <summary>The rebuild that failed part-way and left an index incomplete.</summary>
+/// <param name="EndedAt">When it failed.</param>
+/// <param name="Error">Why it failed, when known.</param>
+/// <param name="DocumentsWritten">Documents in the index when it failed, when known.</param>
+public sealed record FailedRebuildSummary(
+    DateTimeOffset EndedAt,
+    string? Error,
+    long? DocumentsWritten
 );

@@ -3,10 +3,12 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Infrastructure.Manifest;
 using Umbraco.Cms.Search.Core.Notifications;
+using Umbraco.Community.SearchManager.Core.Diagnose;
 using Umbraco.Community.SearchManager.Core.Explore;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Infrastructure;
 using Umbraco.Community.SearchManager.UmbracoSearch.Backoffice;
+using Umbraco.Community.SearchManager.UmbracoSearch.Diagnose;
 using Umbraco.Community.SearchManager.UmbracoSearch.Explore;
 using Umbraco.Community.SearchManager.UmbracoSearch.Indexes;
 using Umbraco.Extensions;
@@ -30,7 +32,16 @@ public sealed class UmbracoSearchManagerComposer : IComposer
         builder.Services.AddSingleton<IIndexSource, UmbracoSearchIndexSource>();
 
         // Explore: chips compiled to ISearcher.SearchAsync (ADR 0016).
-        builder.Services.AddSingleton<IExploreSource, UmbracoSearchExploreSource>();
+        // Registered as itself too, so Diagnose compiles chips exactly as Explore does.
+        builder.Services.AddSingleton<UmbracoSearchExploreSource>();
+        builder.Services.AddSingleton<IExploreSource>(services =>
+            services.GetRequiredService<UmbracoSearchExploreSource>()
+        );
+
+        // Diagnose: field statistics, "Find a node" and the analyzer (ADR 0018, 0019, 0023).
+        builder.Services.AddSingleton<IFieldStatisticsSource, UmbracoSearchFieldStatisticsSource>();
+        builder.Services.AddSingleton<INodePresenceSource, UmbracoSearchNodePresenceSource>();
+        builder.Services.AddSingleton<IAnalyzerSource, UmbracoSearchAnalyzerSource>();
 
         // The Search Manager box on Umbraco Search's index page.
         builder.Services.AddSingleton<IPackageManifestReader, SearchIndexBoxManifestReader>();

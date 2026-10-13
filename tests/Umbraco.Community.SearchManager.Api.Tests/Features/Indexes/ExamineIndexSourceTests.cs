@@ -6,8 +6,11 @@ using Umbraco.Cms.Core;
 using Umbraco.Cms.Infrastructure.Examine;
 using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
+using Umbraco.Community.SearchManager.Api.Tests.Features.Rebuilds.External;
 using Umbraco.Community.SearchManager.Core.Indexes;
+using Umbraco.Community.SearchManager.Core.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds.External;
 
 namespace Umbraco.Community.SearchManager.Api.Tests.Features.Indexes;
 
@@ -19,6 +22,8 @@ public class ExamineIndexSourceTests
     private readonly IIndexRebuilder _indexRebuilder = Substitute.For<IIndexRebuilder>();
     private readonly IIndexingRebuilderService _rebuilder =
         Substitute.For<IIndexingRebuilderService>();
+    private readonly InMemoryRebuildHistory _history = new();
+    private static readonly DateTimeOffset FailedAt = new(2026, 10, 13, 9, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task GetIndexesAsync_HealthyIndex_ReportsCountsPropertiesAndRebuild()
@@ -194,9 +199,8 @@ public class ExamineIndexSourceTests
         _rebuilder.IsRebuildingAsync("ExternalIndex").Returns(true);
 
         // Act
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () =>
-                RebuildAsync("ExternalIndex")
+        RebuildRefusedException exception = await Assert.ThrowsAsync<RebuildRefusedException>(() =>
+            RebuildAsync("ExternalIndex")
         );
 
         // Assert
@@ -213,9 +217,8 @@ public class ExamineIndexSourceTests
             .Returns(Attempt.Fail(IndexRebuildResult.NotAllowedToRun));
 
         // Act
-        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () =>
-                RebuildAsync("ExternalIndex")
+        RebuildRefusedException exception = await Assert.ThrowsAsync<RebuildRefusedException>(() =>
+            RebuildAsync("ExternalIndex")
         );
 
         // Assert
@@ -258,15 +261,184 @@ public class ExamineIndexSourceTests
         Task rebuild = RebuildAsync("DeliveryApiContentIndex");
 
         // Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => rebuild);
+        await Assert.ThrowsAsync<RebuildRefusedException>(() => rebuild);
     }
 
-    private ExamineIndexSource CreateSource() =>
+    [Fact]
+    public async Task GetIndexesAsync_LastRebuildHereFailedPartWay_ReportsIncompleteWithTheFailure()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        _history.Add(Failed("ProductIndex", documentsAfter: 1204));
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal(
+            (
+                IndexHealth.Incomplete,
+                "Price missing",
+                new FailedRebuildSummary(FailedAt, "Price missing", 1204),
+                true
+            ),
+            (
+                summary.Health,
+                summary.HealthMessage,
+                summary.FailedRebuild,
+                summary.Capabilities.Rebuild
+            )
+        );
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_FailureOnAnotherServer_ReportsHealthy()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        _history.Add(
+            Failed("ProductIndex", documentsAfter: 10) with
+            {
+                Server = "SOME-OTHER-SERVER",
+            }
+        );
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal((IndexHealth.Healthy, null), (summary.Health, summary.FailedRebuild));
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_LaterRebuildSucceeded_ReportsHealthy()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        _history.Add(Failed("ProductIndex", documentsAfter: 10));
+        _history.Add(
+            Failed("ProductIndex", documentsAfter: 1204) with
+            {
+                Outcome = RebuildStatus.Succeeded,
+                Error = null,
+            }
+        );
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal(IndexHealth.Healthy, summary.Health);
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_LastRebuildWasRefused_ReportsHealthy()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        _history.Add(Failed("ProductIndex", documentsAfter: null));
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal(IndexHealth.Healthy, summary.Health);
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_IncompleteIndexRebuilding_ReportsRebuilding()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        _history.Add(Failed("ProductIndex", documentsAfter: 1204));
+        _rebuilder.IsRebuildingAsync("ProductIndex").Returns(true);
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal((IndexHealth.Rebuilding, null), (summary.Health, summary.FailedRebuild));
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_IncompleteIndexUnreadable_ReportsCorrupted()
+    {
+        // Arrange
+        IIndex index = AddIndex("ProductIndex", documents: 1, fields: []);
+        _history.Add(Failed("ProductIndex", documentsAfter: 1204));
+        _diagnosticsFactory
+            .Create(index)
+            .Throws(new InvalidOperationException("Lock obtain timed out"));
+
+        // Act
+        IndexSummary summary = Assert.Single(await ListAsync());
+
+        // Assert
+        Assert.Equal(IndexHealth.Corrupted, summary.Health);
+    }
+
+    [Fact]
+    public async Task GetIndexesAsync_HistoryCannotBeRead_StillListsTheIndexes()
+    {
+        // Arrange
+        AddIndex("ProductIndex", documents: 1204, fields: []);
+        IRebuildHistory history = Substitute.For<IRebuildHistory>();
+        history
+            .GetLatestPerIndex(Arg.Any<string?>())
+            .Throws(new InvalidOperationException("No such table"));
+
+        // Act
+        IReadOnlyList<IndexSummary> indexes = await CreateSource(history)
+            .GetIndexesAsync(new HashSet<string>(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(IndexHealth.Healthy, Assert.Single(indexes).Health);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_DuringTheRebuild_MarksTheFlowAsSearchManagers()
+    {
+        // Arrange
+        AddIndex("ExternalIndex", documents: 10, fields: []);
+        bool marked = false;
+        _indexRebuilder
+            .RebuildIndexAsync("ExternalIndex", Arg.Any<TimeSpan?>(), false)
+            .Returns(_ =>
+            {
+                marked = SearchManagerRebuildScope.IsActive;
+                return Attempt.Succeed(IndexRebuildResult.Success);
+            });
+
+        // Act
+        await RebuildAsync("ExternalIndex");
+
+        // Assert
+        Assert.Equal((true, false), (marked, SearchManagerRebuildScope.IsActive));
+    }
+
+    private static RebuildHistoryEntry Failed(string indexName, long? documentsAfter) =>
+        new(
+            indexName,
+            "examine",
+            Environment.MachineName,
+            RebuildTrigger.User,
+            "Jack",
+            FailedAt.AddMinutes(-1),
+            FailedAt,
+            RebuildStatus.Failed,
+            1500,
+            documentsAfter,
+            "Price missing",
+            false
+        );
+
+    private ExamineIndexSource CreateSource(IRebuildHistory? history = null) =>
         new(
             _examineManager,
             _diagnosticsFactory,
             _rebuilder,
             _indexRebuilder,
+            history ?? _history,
             TimeProvider.System,
             NullLogger<ExamineIndexSource>.Instance
         );

@@ -2,54 +2,59 @@
 
 An editor says a page does not show up in the site search. In about ten minutes, this tutorial
 takes you through finding out why with Search Manager: whether the page is in the index at all,
-whether it is published, what the index holds for it, and how to bring the index up to date.
+why not, which part of the search misses it, and how to bring the index up to date.
 
 You need a site with Search Manager installed, and a user with access to the Settings section. The
 steps use `ExternalIndex` and `InternalIndex`, the core Examine indexes every Umbraco site has.
 Most site searches query `ExternalIndex`.
 
-## 1. Look the page up in the public index
+## 1. Find the page in every index
 
-1. Open **Settings > Advanced > Search Manager** and choose the **Explore** tab.
-2. Make sure **Index** says `ExternalIndex`.
-3. In the search box, type `name:` and the first word of the page's name, then press Enter. For
-   a page called "Getting started", type `name:getting`.
+1. Open **Settings > Advanced > Search Manager** and choose the **Diagnose** tab.
+2. Choose **Find a node**.
+3. Type the first words of the page's name, such as `Getting started`, and pick the page from the
+   list.
 
-A chip appears, such as **Name contains getting**, and the results list the documents that match.
+A table lists every index with the page's status in it: **Present**, **Missing** or **Not
+applicable**.
 
-![The Explore view with filter chips and the matching results](../images/explore.png)
+- **`ExternalIndex` says Present?** The page is in the index. Go to
+  [step 3](#3-find-the-part-of-the-search-that-misses-it).
+- **It says Missing?** Carry on with step 2.
 
-- **The page is listed?** It is in the index. Go to [step 3](#3-check-what-the-index-holds).
-- **It is not listed?** Carry on with step 2.
+You can get to the same table from the page: in the content tree, open its actions and choose
+**Show in search indexes**.
 
-## 2. Check whether it is published
+## 2. Read why it is missing
 
-`ExternalIndex` only holds published content. `InternalIndex` holds unpublished content too.
+The reason beside `ExternalIndex` comes from the index's own rules:
 
-1. Change **Index** to `InternalIndex`. Your chip stays.
-2. If the page is listed now, choose its name to open the document drawer.
-3. Find `__Published` under **System**. A value of `n` means the page is not published, so it is
-   not in `ExternalIndex` and no site search will find it. Publish it and you are done.
+- **The page is not published.** `ExternalIndex` only holds published content, while
+  `InternalIndex` (Present) holds drafts too. Publish the page and you are done.
+- **The page is in the recycle bin,** or **outside the part of the tree this index holds:** the
+  page is not meant to be found there.
+- **It should be here: the index is out of date.** Nothing keeps the page out, so the index
+  missed an update. Go to [step 4](#4-rebuild-the-index).
 
-If the page is listed in neither index, or it is published but missing from `ExternalIndex`, the
-index is out of date. Go to [step 4](#4-rebuild-the-index).
+A **Stale** tag on a present row means the same thing for a page the index holds: its copy is
+older than the page.
 
-## 3. Check what the index holds
+## 3. Find the part of the search that misses it
 
-The page is in the index, so the question is whether the site search asks for what the index
-holds.
+The page is in the index, so the question is which part of the site's search does not match it.
 
-1. Choose the page's name to open the document drawer. It lists every stored field: its name,
-   document type, path and every property the index stores.
-2. Check that the field the site search reads holds the text the editor searched for. A property
-   that is not indexed, or a value in a different culture, is a common cause.
-3. Choose **Filter for** beside a value to add it as a chip. The results show the other documents
-   that share it.
+1. Under the table, choose `ExternalIndex` and, if the page has several languages, its culture.
+2. Type the search the way the site runs it, for example `getting started type:contentPage`, and
+   press Enter.
+3. Read the verdict, then each chip: **matched** or **not matched**, with the page's own value of
+   that field. A chip that does not match points at the field the site search reads, or at a
+   value the editor expected but the page does not hold.
+
+To see everything the index stored for the page, choose **View fields** in the table. **Explore**
+opens on that index with the page's document in the drawer: every stored field, with **Filter
+for** and **Filter out** beside each value.
 
 ![The document drawer beside the results, with filter buttons on each field](../images/document-drawer.png)
-
-To see the query in a form you can compare with the site's search code, choose **Show query**. It
-shows the Lucene sent and the C# with Examine that runs the same search.
 
 ## 4. Rebuild the index
 
@@ -64,18 +69,20 @@ The **Rebuilds** panel follows the rebuild. You can leave the page while it runs
 
 ![The Rebuilds panel with finished rebuilds above the indexes table](../images/rebuilds.png)
 
-Go back to **Explore** and search again. The address bar kept your chip, so the browser's back
-button gets you there.
+Go back to **Diagnose**: the address bar kept the page, so the browser's back button gets you
+there, and `ExternalIndex` now says **Present**.
 
 ## What you learned
 
-- Explore finds a document by any field, in any index, without writing Lucene.
-- `InternalIndex` and the `__Published` field tell an unpublished page from a missing one.
-- The document drawer shows exactly what the index stored for a page.
+- **Find a node** checks every index for a page and says why it is missing.
+- `ExternalIndex` holds published content only; `InternalIndex` holds drafts too.
+- Testing a search chip by chip shows which part of it misses the page, and with which value.
 - A rebuild runs on the server, and **Done** means the index is ready to search.
 
 ## Next steps
 
+- [Find where a page is indexed](../how-to/find-where-a-page-is-indexed.md): every status and
+  reason.
 - [Search an index](../how-to/search-an-index.md): every way to filter and narrow results.
 - [Rebuild indexes](../how-to/rebuild-indexes.md): bulk rebuilds and the history.
 - [How rebuilds work](../explanation/how-rebuilds-work.md): what a rebuild does to live search.

@@ -7,6 +7,7 @@ import {
   moveHighlight,
   readInput,
   valueOperator,
+  valueLabel,
   valueSuggestions,
 } from "./suggestions.js";
 import { schema as baseSchema, term } from "./term.test-helper.js";
@@ -93,6 +94,11 @@ describe("valueSuggestions", () => {
     expect(row).toMatchObject({ term: true, filter: { op: "Contains" } });
   });
 
+  it("shows a value as written but sends the indexed term", () => {
+    const [row] = valueSuggestions(schema, readInput("type:pr"), [{ value: "product", count: 1, display: "Product" }]);
+    expect(row).toMatchObject({ label: "Product", filter: { value: "product" } });
+  });
+
   it("offers relative ranges for a date field", () => {
     const rows = valueSuggestions(schema, readInput("updated:-"), []);
     expect(rows.map((row) => row.label)).toEqual(["-7d", "-30d", "-365d"]);
@@ -100,6 +106,20 @@ describe("valueSuggestions", () => {
 
   it("offers nothing for an unknown field", () => {
     expect(valueSuggestions(schema, readInput("colour:r"), [{ value: "red", count: 1 }])).toEqual([]);
+  });
+});
+
+describe("valueLabel", () => {
+  it("shows the value as written when the server knows it", () => {
+    expect(valueLabel("Keyword", { value: "product", count: 1, display: "Product" }, term)).toBe("Product");
+  });
+
+  it("falls back to the indexed term without a display value", () => {
+    expect(valueLabel("Keyword", { value: "product", count: 1, display: null }, term)).toBe("product");
+  });
+
+  it("reads relative dates", () => {
+    expect(valueLabel("Date", { value: "today", count: 1 }, term)).toBe(term("searchManager_relativeToday"));
   });
 });
 

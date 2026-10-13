@@ -10,7 +10,13 @@ using Umbraco.Cms.Infrastructure.Examine;
 using Umbraco.Community.SearchManager.Core.Explore;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Explanation = Lucene.Net.Search.Explanation;
 using IndexSearcher = Lucene.Net.Search.IndexSearcher;
+using Query = Lucene.Net.Search.Query;
+using QueryWrapperFilter = Lucene.Net.Search.QueryWrapperFilter;
+using Term = Lucene.Net.Index.Term;
+using TermQuery = Lucene.Net.Search.TermQuery;
+using TopDocs = Lucene.Net.Search.TopDocs;
 
 namespace Umbraco.Community.SearchManager.Features.Explore;
 
@@ -27,6 +33,8 @@ internal sealed class ExamineExploreSource(
     TimeProvider timeProvider
 ) : IExploreSource
 {
+    private readonly ExamineTargets _targets = new(examineManager);
+
     /// <summary>The field results are sorted by, newest first, when no clause ranks them.</summary>
     private const string UpdateDateField = "updateDate";
 
@@ -104,8 +112,8 @@ internal sealed class ExamineExploreSource(
         CancellationToken cancellationToken
     )
     {
-        ISearcher searcher = SearcherOf(target);
-        return Task.FromResult(ExamineFields.Read(searcher, IndexesBehind(searcher)));
+        ISearcher searcher = _targets.SearcherOf(target);
+        return Task.FromResult(ExamineFields.Read(searcher, _targets.IndexesBehind(searcher)));
     }
 
     /// <inheritdoc />
@@ -125,13 +133,16 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(query);
 
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
 
-        // Native mode runs the raw query exactly as typed, ranked like any text query.
-        LuceneCompilation compilation = query.Native is null
-            ? Compile(query.Filters, query.Culture, schema, target)
-            : new LuceneCompilation(RequireNative(target, query.Native), [], true);
+        LuceneCompilation compilation = Compile(
+            query.Filters,
+            query.Culture,
+            query.Native,
+            schema,
+            target
+        );
         IBooleanOperation operation = Parse(searcher, compilation.Query).Operation;
 
         // Without words to rank by every score is equal, so the newest documents come first,
@@ -165,6 +176,96 @@ internal sealed class ExamineExploreSource(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Compiles and parses the query exactly as <see cref="SearchAsync"/> does, then asks Lucene's
+    /// <c>IndexSearcher.Explain</c> for the document found by <c>__NodeId</c> (ADR 0020).
+    /// A multi-index searcher can hold one id in several indexes; the highest-scoring copy wins.
+    /// </remarks>
+    public Task<ExplainResult> ExplainAsync(
+        ExploreTarget target,
+        ExplainRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(request);
+        if (!target.Capabilities.ExplainScore)
+        {
+            throw new NotSupportedException(
+                $"{target.Name} is not a Lucene index, so its scores cannot be explained"
+            );
+        }
+
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
+        IReadOnlyList<Core.Explore.Filter> filters = request.Filters ?? [];
+        LuceneCompilation compilation = Compile(
+            filters,
+            request.Culture,
+            request.Native,
+            schema,
+            target
+        );
+        Query query = ((LuceneSearchQueryBase)Parse(searcher, compilation.Query).Query).Query;
+        HashSet<int> skipped = [.. compilation.Skipped.Select(skip => skip.Index)];
+
+        // Native mode has no chips, so nothing to list as must-not-match.
+        IReadOnlyList<int> mustNotMatch = request.Native is null
+            ? ScoreExplanationReader.MustNotMatch(filters, skipped)
+            : [];
+
+        using ISearcherReference reference = ((BaseLuceneSearcher)searcher)
+            .GetSearchContext()
+            .GetSearcher();
+        IndexSearcher indexSearcher = reference.IndexSearcher;
+        var documents = new List<DocumentExplanation>();
+        foreach (string id in request.Ids ?? [])
+        {
+            var byId = new TermQuery(new Term(ExamineFieldNames.ItemIdFieldName, id));
+
+            // Filtering by id leaves the query's score as a search gives it.
+            TopDocs top = indexSearcher.Search(query, new QueryWrapperFilter(byId), 1);
+            if (top.ScoreDocs.Length == 0)
+            {
+                bool found = indexSearcher.Search(byId, 1).TotalHits > 0;
+                documents.Add(new DocumentExplanation(id, found, false, null, null, mustNotMatch));
+                continue;
+            }
+
+            Explanation explanation = indexSearcher.Explain(query, top.ScoreDocs[0].Doc);
+            documents.Add(
+                new DocumentExplanation(
+                    id,
+                    true,
+                    true,
+                    explanation.Value,
+                    ScoreExplanationReader.Read(
+                        Raw(explanation),
+                        schema,
+                        filters,
+                        request.Culture,
+                        skipped
+                    ),
+                    mustNotMatch
+                )
+            );
+        }
+
+        return Task.FromResult(new ExplainResult(documents));
+    }
+
+    /// <summary>Copies a Lucene explanation into the engine-neutral tree Core reads.</summary>
+    /// <param name="explanation">The explanation.</param>
+    /// <returns>The copy.</returns>
+    private static RawExplanation Raw(Explanation explanation) =>
+        new(
+            explanation.Value,
+            explanation.Description ?? string.Empty,
+            explanation.IsMatch,
+            [.. (explanation.GetDetails() ?? []).Select(Raw)]
+        );
+
+    /// <inheritdoc />
     public Task<TermsResult?> GetTermsAsync(
         ExploreTarget target,
         string field,
@@ -176,8 +277,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         RequireTermStatistics(target);
 
-        ISearcher searcher = SearcherOf(target);
-        LuceneIndex[] indexes = IndexesBehind(searcher);
+        ISearcher searcher = _targets.SearcherOf(target);
+        LuceneIndex[] indexes = _targets.IndexesBehind(searcher);
         IndexField? resolved = ExamineFields.Read(searcher, indexes).Resolve(field);
         if (resolved is null)
         {
@@ -210,8 +311,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(query);
         RequireTermStatistics(target);
 
-        ISearcher searcher = SearcherOf(target);
-        LuceneIndex[] indexes = IndexesBehind(searcher);
+        ISearcher searcher = _targets.SearcherOf(target);
+        LuceneIndex[] indexes = _targets.IndexesBehind(searcher);
         FieldSchema schema = ExamineFields.Read(searcher, indexes);
         LuceneCompilation compilation = Compile(query.Filters, query.Culture, schema, target);
 
@@ -236,6 +337,15 @@ internal sealed class ExamineExploreSource(
             }
 
             field = schema.ForCulture(field, query.Culture);
+
+            // A field is counted without its own include chips, so its other values stay
+            // listed (ADR 0021); most fields have none and reuse the results.
+            IReadOnlyList<Core.Explore.Filter> own = FacetFilters.Without(
+                query.Filters,
+                field.Name,
+                schema,
+                query.Culture
+            );
             if (field.Type == FieldType.Date)
             {
                 // Dates count relative ranges ("on or after 7 days ago"), the values a date chip
@@ -246,7 +356,7 @@ internal sealed class ExamineExploreSource(
                     {
                         LuceneCompilation withRange = Compile(
                             [
-                                .. query.Filters,
+                                .. own,
                                 new Filter(
                                     FilterKind.Field,
                                     field.Name,
@@ -265,11 +375,14 @@ internal sealed class ExamineExploreSource(
                 continue;
             }
 
+            FixedBitSet counted = ReferenceEquals(own, query.Filters)
+                ? documents
+                : Matches(Compile(own, query.Culture, schema, target).Query);
             (IReadOnlyList<TermCount> values, bool sampled) = LuceneTerms.Count(
                 indexSearcher.IndexReader,
                 field.Name,
                 ExamineFields.ValueTypeOf(field.Name, indexes),
-                documents,
+                counted,
                 query.Take
             );
             facets.Add(new FieldFacet(field.Name, field.Type, values, sampled));
@@ -294,8 +407,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(request);
 
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         if (request.Native is not null)
         {
             string native = RequireNative(target, request.Native);
@@ -342,8 +455,8 @@ internal sealed class ExamineExploreSource(
     {
         ArgumentNullException.ThrowIfNull(target);
         string native = RequireNative(target, query);
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         IReadOnlyList<NativeWarning> warnings = NativeQueryLinter.Lint(native, schema);
 
         try
@@ -373,8 +486,8 @@ internal sealed class ExamineExploreSource(
     {
         ArgumentNullException.ThrowIfNull(target);
         string native = RequireNative(target, query);
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         return Task.FromResult(LuceneToChips.Read(native, schema));
     }
 
@@ -427,6 +540,29 @@ internal sealed class ExamineExploreSource(
         string trimmed = (query ?? string.Empty).Trim();
         return trimmed.Length == 0 ? LuceneQueryCompiler.MatchAll : trimmed;
     }
+
+    /// <summary>
+    /// The query a search runs: the raw query exactly as typed in native mode (ranked like any
+    /// text query), otherwise the compiled chips. Search and explain share it, so an explanation
+    /// is of the query that ran.
+    /// </summary>
+    /// <param name="filters">The chips.</param>
+    /// <param name="culture">The culture picked, or null.</param>
+    /// <param name="native">The raw query in native mode, or null.</param>
+    /// <param name="schema">The target's fields.</param>
+    /// <param name="target">The target.</param>
+    /// <returns>The compiled query.</returns>
+    /// <exception cref="NotSupportedException">A raw query on a target that takes none.</exception>
+    private LuceneCompilation Compile(
+        IReadOnlyList<Core.Explore.Filter> filters,
+        string? culture,
+        string? native,
+        FieldSchema schema,
+        ExploreTarget target
+    ) =>
+        native is null
+            ? Compile(filters, culture, schema, target)
+            : new LuceneCompilation(RequireNative(target, native), [], true);
 
     /// <summary>Compiles filters for a target, resolving relative dates against the server's clock.</summary>
     /// <param name="filters">The chips.</param>
@@ -482,66 +618,14 @@ internal sealed class ExamineExploreSource(
         }
     }
 
-    /// <summary>The searcher behind a target.</summary>
-    /// <param name="target">A target this source listed.</param>
-    /// <returns>The index's own searcher, or the registered searcher.</returns>
-    /// <exception cref="InvalidOperationException">The index or searcher has gone.</exception>
-    private ISearcher SearcherOf(ExploreTarget target)
-    {
-        if (
-            target.Kind == ExploreTargetKind.Index
-            && examineManager.TryGetIndex(target.Name, out IIndex? index)
-        )
-        {
-            return index.Searcher;
-        }
-
-        if (examineManager.TryGetSearcher(target.Name, out ISearcher? searcher))
-        {
-            return searcher;
-        }
-
-        throw new InvalidOperationException($"Examine has no index or searcher {target.Name}");
-    }
-
-    /// <summary>The Lucene indexes a searcher reads: its own index, or a multi-index searcher's.</summary>
-    /// <param name="searcher">The searcher.</param>
-    /// <returns>The indexes, in <see cref="IExamineManager"/> order.</returns>
-    private LuceneIndex[] IndexesBehind(ISearcher searcher)
-    {
-        ISearcher[] searchers = searcher is MultiIndexSearcher multi
-            ? SearchersOf(multi)
-            : [searcher];
-        return
-        [
-            .. examineManager
-                .Indexes.OfType<LuceneIndex>()
-                .Where(index =>
-                    searchers.Any(candidate => ReferenceEquals(candidate, index.Searcher))
-                ),
-        ];
-    }
-
-    /// <summary>The searchers a multi-index searcher combines.</summary>
-    /// <param name="multi">The multi-index searcher.</param>
-    /// <returns>Its searchers.</returns>
-    /// <remarks>
-    /// Read by name: the property's type differs between Examine 3 and Examine 4 (which Umbraco
-    /// Search brings), so a compiled call binds to one signature and throws
-    /// <see cref="MissingMethodException"/> under the other.
-    /// </remarks>
-    internal static ISearcher[] SearchersOf(MultiIndexSearcher multi) =>
-        typeof(MultiIndexSearcher)
-            .GetProperty(nameof(MultiIndexSearcher.Searchers))
-            ?.GetValue(multi)
-            is System.Collections.IEnumerable searchers
-            ? [.. searchers.OfType<ISearcher>()]
-            : [];
-
     private static ExploreCapabilities CapabilitiesOf(ISearcher searcher)
     {
         bool lucene = searcher is BaseLuceneSearcher;
-        return new ExploreCapabilities(NativeQuery: lucene, TermStatistics: lucene);
+        return new ExploreCapabilities(
+            NativeQuery: lucene,
+            TermStatistics: lucene,
+            ExplainScore: lucene
+        );
     }
 
     /// <summary>
@@ -566,6 +650,9 @@ internal sealed class ExamineExploreSource(
             );
 
         return IsMember(searcher)
-            || (searcher is MultiIndexSearcher multi && SearchersOf(multi).Any(IsMember));
+            || (
+                searcher is MultiIndexSearcher multi
+                && ExamineTargets.SearchersOf(multi).Any(IsMember)
+            );
     }
 }

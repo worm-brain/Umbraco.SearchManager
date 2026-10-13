@@ -29,7 +29,7 @@ Short names such as `type`, `name` and `updated` stand for Umbraco's own fields.
 Two chips on different fields must both match. If you leave a quote open, the whole input is
 searched as plain text and a message says why.
 
-### Edit or remove a chip
+## Edit or remove a chip
 
 - Click a chip to edit it. Change the **Operator**, the **Value**, or tick **Exclude matches**,
   then choose **Apply**. The operators on offer suit the field's type: numbers and dates get
@@ -37,7 +37,8 @@ searched as plain text and a message says why.
 - Choose the cross on a chip to remove it.
 
 A chip that cannot run is struck through, with the reason in its tooltip. For example, a field
-the index does not have.
+the index does not have. After a search, a chip the server left out is struck through the same
+way.
 
 ## Let suggestions write the filter
 
@@ -57,6 +58,10 @@ The **Fields** panel shows the top values of document type, index type, publishe
 with counts. It counts the whole index when there are no filters, and the current results when
 there are.
 
+A field is counted without its own filters, so after you pick a document type the other types
+stay listed with the counts they would add. Excluded values stay excluded. Values show as the
+editor wrote them, such as `blogPost`, although the index stores and matches them in lower case.
+
 - Click a value to filter on it.
 - Choose the minus beside a value to exclude it.
 - **All fields** lists every field with its type and coverage. Choose one to add a filter on it.
@@ -71,6 +76,29 @@ field, grouped into **System**, **Properties**, **Culture variants** and raw cop
 
 The pencil beside a result's name opens the item in its editor straight away.
 
+## Explain a score
+
+In the document drawer, choose **Explain score** to see why the result scored as it did. Each
+part of the score gets a line:
+
+- **Words and phrases** found in a field, with how often they occur and the numbers Lucene
+  multiplies: term frequency (`tf`), how rare the word is across the index (`idf`) and how short
+  the field is (field norm). Rarer words in shorter fields score higher.
+- **Must match** filters on keyword, number and date fields. They decide what matches, and in
+  Lucene they add the same amount to every result they match.
+- **Must not match** filters, which add no score.
+- **Coord**, when only some of the optional words matched.
+
+When the results are sorted newest first (filters only, no words), nothing ranks them, and the
+drawer says so instead. Scores cannot be explained for indexes that are not Lucene indexes, or for
+Umbraco Search indexes, which return no scores.
+
+## Compare two results
+
+Tick **Compare** on two results, then choose **Compare scores**. A table lists each part of the
+score for both documents side by side, with the difference, largest first. Turn on
+**Differences only** to hide the parts they share.
+
 ![The document drawer beside the results, listing the system fields of a blog post](../images/document-drawer.png)
 
 ## Choose the columns
@@ -82,6 +110,9 @@ Results come 20 to a page, with paging under the table.
 
 On a site with more than one language, choose a culture in **Culture**. Chips then search that
 culture's variant of each field, such as `nodeName_en-us`, where the index has one.
+
+Umbraco Search indexes start on the site's default language, because without a culture they find
+only content that does not vary. Choose **No culture (invariant content only)** to search that.
 
 ## Share what you see
 

@@ -8,6 +8,28 @@ import type { UmbLocalizationDictionary } from "@umbraco-cms/backoffice/localiza
  * backoffice falls back to `en` for any culture without its own dictionary. Entries that take
  * values are functions; `localize.term(key, ...args)` passes the arguments through.
  */
+/**
+ * A count in British English digit grouping, or `-` when unknown.
+ *
+ * @param count - The count.
+ * @returns The text.
+ */
+function n(count: number | null | undefined): string {
+  return count == null ? "-" : count.toLocaleString("en-GB");
+}
+
+/**
+ * A count with its noun, singular for exactly one: `1 document`, `2,104 documents`.
+ *
+ * @param count - The count; unknown reads `-` with the plural.
+ * @param one - The singular noun.
+ * @param many - The plural noun.
+ * @returns The text.
+ */
+function plural(count: number | null | undefined, one: string, many: string): string {
+  return `${n(count)} ${count === 1 ? one : many}`;
+}
+
 export default {
   searchManager: {
     // Workspace, menu item and tabs.
@@ -15,8 +37,140 @@ export default {
     tabIndexes: "Indexes",
     tabExplore: "Explore",
     tabDiagnose: "Diagnose",
-    diagnoseIndex: (index: string) => `Diagnose ${index}`,
-    diagnoseSoon: "Field statistics, analyzers and where a page is indexed. Coming in a later slice.",
+
+    // Diagnose view: the shell and the Fields tool.
+    diagnoseTool: "Tool",
+    diagnoseFields: "Fields",
+    diagnoseNoTargets: "There is no index to diagnose.",
+    fieldStatsHeadline: (index: string) => `Fields in ${index}`,
+    fieldStatsLoading: "Reading the index. On a large index this takes a few seconds.",
+    fieldStatsError: (message: string) => `Could not read the field statistics: ${message}`,
+    fieldStatsUnavailable: "Field statistics are not available for this index.",
+    fieldStatsDocuments: (count: string) => `${count} documents`,
+    fieldStatsDeleted: (count: string) => `${count} deleted`,
+    fieldStatsPerCulture:
+      "Umbraco Search keeps one document per culture, so the counts are culture documents, not content items",
+    fieldStatsEstimate: "Coverage figures are estimates",
+    fieldStatsNoMissingLink: (reason: string) => `Missing counts do not link to Explore: ${reason}`,
+    fieldStatsShowAll: "Show system fields, culture variants and raw copies",
+    fieldStatsNoFields: "No fields match.",
+    fieldStatsTableLabel: "Field statistics",
+    fieldStatsColumnField: "Field",
+    fieldStatsColumnType: "Type",
+    fieldStatsColumnAnalyzer: "Analyzer",
+    fieldStatsColumnCoverage: "Coverage",
+    fieldStatsColumnUnique: "Unique terms",
+    fieldStatsColumnTopTerms: "Top terms (click to search)",
+    fieldStatsColumnMissing: "Missing",
+    fieldStatsGroupSystem: "System field",
+    fieldStatsGroupCulture: (culture: string) => `Culture variant (${culture})`,
+    fieldStatsGroupRaw: "Raw copy, not analysed",
+    fieldStatsGroupSegment: "Segment",
+    fieldStatsStoredOnly: "Stored only, not searchable",
+    fieldStatsAtLeast: (count: string) => `at least ${count}`,
+    fieldStatsAnalyzed: "Analyzed terms, not whole values",
+    fieldStatsRange: (min: string, max: string) => `${min} to ${max}`,
+    fieldStatsMissing: (count: string) => `${count} missing`,
+    fieldStatsMissingLink: (count: string, field: string) => `Search the ${count} documents missing ${field}`,
+
+    // Diagnose view: the Find a node tool and the "Show in search indexes" action.
+    diagnoseFindNode: "Find a node",
+    showInSearchIndexes: "Show in search indexes",
+    openInSearchManager: "Open in Search Manager",
+    nodeSearchTitle: "Find a document",
+    nodeSearchLabel: "Document name, id or key",
+    nodeSearchPlaceholder: "Type a document name, id or key",
+    nodeSearchError: (message: string) => `Could not look the document up: ${message}`,
+    nodeNoCandidates: "No document matches.",
+    nodeCandidateTrashed: (id: string) => `${id} · in the recycle bin`,
+    nodeNotFound: "No document has this key.",
+    nodeLoadError: (message: string) => `Could not load where the document is indexed: ${message}`,
+    nodeKey: "Key",
+    nodePublished: "Published",
+    nodeUnpublished: "Not published",
+    nodeTrashed: "In the recycle bin",
+    nodeProtected: "Protected",
+    nodeCulturePublished: "published",
+    nodeCultureDraft: "published, with unpublished changes",
+    nodeCultureUnpublished: "not published",
+    nodePresenceTitle: "Search indexes",
+    nodePresenceLabel: "Where the document is indexed",
+    nodeNoIndexes: "There is no index to check.",
+    nodeColumnStatus: "Status",
+    nodeColumnReason: "Why",
+    nodePresent: "Present",
+    nodeMissing: "Missing",
+    nodeNotApplicable: "Not applicable",
+    nodeStale: "Stale",
+    nodeStaleTitle: (indexed: string, expected: string) =>
+      `The index holds the version from ${indexed}; the document was updated ${expected}.`,
+    nodeViewFields: (index: string) => `View the document's fields in ${index}`,
+    nodeViewFieldsShort: "View fields",
+    matchTitle: "Why doesn't this query match it?",
+    matchNoIndex: "No index holds this document, so there is nothing to test a query against.",
+    matchQueryLabel: "Query to test",
+    matchQueryPlaceholder: "Words or field:value, as in Explore (Enter tests it)",
+    matchRun: "Test",
+    matchError: (message: string) => `Could not test the query: ${message}`,
+    matchYes: "Matches this document",
+    matchNo: "Does not match this document",
+    matchNotInIndex: "This document is not in the index",
+    clauseMatched: "matched",
+    clauseNotMatched: "not matched",
+    clauseSkipped: "skipped",
+    matchNodeValues: (field: string) => `The document's ${field}:`,
+    matchNoValue: "(no value)",
+    matchOrNote:
+      "Filters on the same field are ORed together, so the overall result can differ from the filters one by one.",
+
+    // Diagnose view: the Analyzer tool.
+    diagnoseAnalyzer: "Analyzer",
+    analyzerIntro:
+      "See how each index breaks text into the terms it stores, and whether a visitor's search finds them.",
+    analyzerTextLabel: "Text to index",
+    analyzerTextPlaceholder: "A property value, for example a page title",
+    analyzerTermLabel: "A visitor searches for",
+    analyzerTermPlaceholder: "Words, as a visitor would type them",
+    analyzerNoText: "Type some text to see how each index stores it.",
+    analyzerTextTooLong: (max: string) => `The text is too long: the analyzer takes up to ${max} characters.`,
+    analyzerTermTooLong: (max: string) => `The search is too long: it can be up to ${max} characters.`,
+    analyzerIndex: "Index",
+    analyzerField: "Field",
+    analyzerFieldsError: (message: string) => `Could not load the fields: ${message}`,
+    analyzerError: (message: string) => `Could not analyse the text: ${message}`,
+    analyzerLoading: "Analysing",
+    analyzerUnavailable: "The analyzer is not available for this index.",
+    analyzerNoFields: "This index has no field to analyse.",
+    analyzerName: (name: string) => `Analyzer: ${name}`,
+    analyzerStagesLabel: "Analysis stages",
+    analyzerStored: "stored in the index",
+    analyzerNoTokens: "No terms",
+    analyzerTruncated: "The text is long, so only the start of it is shown.",
+    analyzerTokenTitle: (position: string, start: string, end: string) =>
+      `Position ${position}, characters ${start} to ${end}`,
+    analyzerTokenRemoved: "removed",
+    analyzerTokenChanged: "changed",
+    analyzerTokenAdded: "added",
+    analyzerTokenMatch: "matches the search",
+    analyzerTokenPrefix: "starts with a search word",
+    analyzerTokenPattern: "matches a search pattern",
+    analyzerGap: (count: string) =>
+      count === "1" ? "a gap left by 1 removed word" : `a gap left by ${count} removed words`,
+    analyzerNoTerm: "Type a search to see whether it finds this text.",
+    analyzerMatches: "Matches",
+    analyzerNoMatch: "No match",
+    analyzerSearchBecomes: (groups: string) => `The search becomes: ${groups}.`,
+    analyzerSearchRanked: (groups: string, ranked: string) => `The search becomes: ${groups}; ${ranked} ranks higher.`,
+    analyzerJoinAnd: "and",
+    analyzerJoinOr: "or",
+    analyzerPartWord: (text: string) => text,
+    analyzerPartPrefix: (text: string) => `words starting with ${text}`,
+    analyzerPartWildcard: (text: string) => `words matching ${text}`,
+    analyzerPartPhrase: (text: string) => `the exact phrase "${text}"`,
+    analyzerPartFuzzy: (text: string) => `words similar to ${text}`,
+    analyzerPartOther: (text: string) => text,
+    analyzerPartAlternatives: (first: string, rest: string) => `${first} (or ${rest})`,
+    analyzerTryField: (field: string) => `See how ${field} is analysed`,
 
     // Indexes view.
     reload: "Reload",
@@ -38,12 +192,19 @@ export default {
     healthCorrupted: "Corrupted",
     healthEmpty: "Empty",
     healthIncomplete: "Incomplete",
+    healthIncompleteDetail: (documents: string, error: string) => {
+      const failed = documents
+        ? `Last rebuild failed after writing ${documents} documents`
+        : "Last rebuild failed part-way";
+      return error ? `${failed}: ${error}` : failed;
+    },
     healthUnknown: "Unknown",
 
     // Explore view: pickers and search box.
     exploreIndex: "Index",
     exploreCulture: "Culture",
     exploreAllCultures: "All cultures",
+    exploreNoCulture: "No culture (invariant content only)",
     exploreSearcher: (name: string) => `${name} (searcher)`,
     exploreTargetsError: (message: string) => `Could not load the indexes: ${message}`,
     exploreNoTargets: "There is no index you can search.",
@@ -62,7 +223,7 @@ export default {
     chipHasValue: (field: string) => `${field} has a value`,
     chipEdit: (description: string) => `Edit filter: ${description}`,
     chipRemove: (description: string) => `Remove filter: ${description}`,
-    chipDisabled: (reason: string) => `${reason}. Not sent.`,
+    chipDisabled: (reason: string) => `${reason}. Left out of the search.`,
     chipUnknownField: (field: string, index: string) => `There is no field "${field}" in ${index}`,
     chipWrongOperator: (op: string, type: string) => `"${op}" does not apply to ${type} fields`,
     chipNoLucene: (index: string) => `${index} does not take raw Lucene queries`,
@@ -96,8 +257,8 @@ export default {
 
     // Results.
     resultsLabel: "Search results",
-    resultsCount: (count: number) => (count === 1 ? "1 result" : `${count.toLocaleString("en-GB")} results`),
-    resultsWhole: (count: number) => `${count.toLocaleString("en-GB")} documents, newest first`,
+    resultsCount: (count: number) => plural(count, "result", "results"),
+    resultsWhole: (count: number) => `${plural(count, "document", "documents")}, newest first`,
     resultsNone: "No documents match. Remove a filter, or check the field names.",
     resultsSkipped: (count: number) => (count === 1 ? "1 filter was not sent" : `${count} filters were not sent`),
     columnScore: "Score",
@@ -127,6 +288,63 @@ export default {
     groupRaw: "Raw copies, stored but not analysed",
     documentGone: "This document is not in the current results.",
 
+    // Explain a score: the drawer's "Explain score" and the score tree.
+    explainButton: "Explain score",
+    explainNotLucene: (target: string) => `${target} is not a Lucene index, so its scores cannot be explained`,
+    explainUmbracoSearch: "Umbraco Search does not return scores",
+    explainNotRanked: "Not ranked: only filters, sorted newest first",
+    explainLoading: "Explaining the score",
+    explainError: (message: string) => `Could not explain the score: ${message}`,
+    explainNotFound: "This document is no longer in the index",
+    explainNotMatched: "This document no longer matches the search (the index has changed since)",
+    explainTreeLabel: (name: string) => `How the score of ${name} is made up`,
+    explainExcludedLabel: "Filters that add no score",
+    explainTotal: (score: string) => `Score ${score}`,
+    explainSum: "The sum of",
+    explainCoord: (matched: string, of: string) =>
+      `${matched} of ${of} optional ${of === "1" ? "clause" : "clauses"} matched, so the score is scaled by ${matched}/${of}`,
+    explainTermMatch: (field: string, word: string, times: string) => `${field} contains "${word}" ${times}`,
+    explainPhraseMatch: (field: string, phrase: string, times: string) =>
+      `${field} contains the phrase "${phrase}" ${times}`,
+    explainOnce: "once",
+    explainTimes: (count: string) => `${count} times`,
+    explainPrefix: (field: string, prefix: string) => `${field} starts with "${prefix}" (every match scores the same)`,
+    explainWildcard: (field: string, pattern: string) => `${field} matches "${pattern}" (every match scores the same)`,
+    explainMatchAll: "Matches every document: every result scores the same",
+    explainFilter: (chip: string) => `must match: ${chip}`,
+    explainMustNotMatch: (chip: string) => `must not match ${chip}, adds no score`,
+    explainNoScore: (chip: string) => `must match: ${chip}, adds no score`,
+    explainTf: (value: string) => `tf ${value}`,
+    explainIdf: (value: string) => `idf ${value}`,
+    explainFieldNorm: (value: string) => `field norm ${value}`,
+    explainBoost: (value: string) => `boost ${value}`,
+    explainDocFreq: (docFreq: string, maxDocs: string) =>
+      `in ${docFreq} of ${maxDocs} ${maxDocs === "1" ? "document" : "documents"}`,
+    explainMore: (count: number) => (count === 1 ? "1 clause" : `${count} clauses`),
+    explainFilterDetail: "How the clause matched",
+
+    // Compare two scores.
+    compareColumn: "Compare",
+    compareSelect: (name: string) => `Compare the score of ${name}`,
+    compareLimit: "Two results are already picked",
+    compareButton: "Compare scores",
+    compareTitle: "Compare scores",
+    compareClose: "Close comparison",
+    compareTableLabel: "Score comparison",
+    compareDifferencesOnly: "Differences only",
+    compareWhat: "What",
+    compareDifference: "Difference (A - B)",
+    compareDocument: (side: string, name: string, score: string) => `${side}: ${name}, score ${score}`,
+    compareNone: "Both scores are made up the same way.",
+    compareSideA: "A",
+    compareSideB: "B",
+    compareProblem: (side: string, name: string, reason: string) => `${side} (${name}): ${reason}`,
+    compareQueryNorm: "Query normalisation (multiplies every word; the same for both)",
+    compareCoord: "Scaled down for optional clauses that did not match",
+    compareTerm: (field: string, word: string) => `${field} contains "${word}"`,
+    comparePhrase: (field: string, phrase: string) => `${field} contains the phrase "${phrase}"`,
+    compareConstant: (field: string, pattern: string) => `${field} matches "${pattern}"`,
+
     // Suggestions and the fields panel.
     suggestFields: "Fields",
     suggestValues: (field: string) => `Values of ${field}`,
@@ -135,8 +353,8 @@ export default {
     suggestText: "Search all fields for this text",
     suggestHint: "Up and down to move, Enter to pick, Escape to close, -field:value excludes",
     fieldsPanel: "Fields",
-    fieldsWholeIndex: (count: string) => `whole index, ${count} documents`,
-    fieldsResults: (count: string) => `these ${count} results`,
+    fieldsWholeIndex: (count: number) => `whole index, ${plural(count, "document", "documents")}`,
+    fieldsResults: (count: number) => (count === 1 ? "this 1 result" : `these ${n(count)} results`),
     fieldsSampled: "Some values are left out: the field has more values than are counted.",
     fieldsError: (message: string) => `Could not count values: ${message}`,
     fieldsNoValues: "No values",
@@ -177,7 +395,7 @@ export default {
     queryRequestNote:
       "Document types are shown by alias; the filter sends the content type key. Without a culture, Umbraco Search finds only documents that do not vary by culture.",
     queryCopy: "Copy",
-    queryNotSent: (chip: string, reason: string) => `Not sent: ${chip}. ${reason}.`,
+    queryNotSent: (chip: string, reason: string) => `Left out: ${chip}. ${reason}.`,
     queryError: (message: string) => `Could not show the query: ${message}`,
     // Engine filter (Umbraco Search adapter).
     engineFilterLabel: "Engine",
@@ -218,14 +436,15 @@ export default {
     rebuildsProgressLabel: (name: string) => `${name} rebuild progress, estimated`,
     rebuildsWaiting: (position: number) => (position === 1 ? "Waiting, next in line" : `Waiting, ${position} in line`),
     rebuildsStarting: "Starting",
-    rebuildsRunning: (written: string, total: string, percent: number) =>
-      `About ${written} of ${total} documents (${percent}%), estimated from the last run`,
-    rebuildsRunningNoEstimate: (written: string) => `${written} documents so far`,
+    rebuildsRunning: (written: number | null, total: number | null, percent: number) =>
+      `About ${n(written)} of ${plural(total, "document", "documents")} (${percent}%), estimated from the last run`,
+    rebuildsRunningNoEstimate: (written: number | null) => `${plural(written, "document", "documents")} so far`,
     rebuildsRunningZeroDowntime: (percent: number | null) =>
       percent === null
         ? "Building a fresh copy. Search keeps using the current one."
         : `Building a fresh copy. Search keeps using the current one. About ${percent}%, estimated`,
-    rebuildsSucceeded: (duration: string, documents: string) => `Done in ${duration}, ${documents} documents`,
+    rebuildsSucceeded: (duration: string, documents: number | null) =>
+      `Done in ${duration}, ${plural(documents, "document", "documents")}`,
     rebuildsSucceededEmpty: (duration: string) => `Done in ${duration}, nothing to index`,
     rebuildsFailed: (duration: string, error: string) => `Failed after ${duration}: ${error}`,
     rebuildsCancelled: "Cancelled before it started",
@@ -244,6 +463,7 @@ export default {
     detailsNoProperties: "This index reports no properties.",
     historyTriggerUser: (name: string) => `${name}, from Search Manager`,
     historyTriggerOther: "Started outside Search Manager",
+    historyTriggerStartup: "At startup",
     historySucceeded: "Succeeded",
     historyFailed: "Failed",
     historyDetail: (duration: string, before: string, after: string, server: string) =>

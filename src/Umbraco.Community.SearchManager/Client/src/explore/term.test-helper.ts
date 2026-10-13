@@ -44,5 +44,5 @@ export const target: ExploreTarget = {
   kind: "Index",
   description: null,
   isMemberData: false,
-  capabilities: { nativeQuery: true, termStatistics: true },
+  capabilities: { nativeQuery: true, termStatistics: true, explainScore: true },
 };

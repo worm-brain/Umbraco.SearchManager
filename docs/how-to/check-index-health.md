@@ -38,6 +38,7 @@ Each row is one index. The badge beside its name says which engine runs it: **Ex
 | **Queued for rebuild** | A Search Manager rebuild is waiting its turn. |
 | **Unhealthy** | The index opens but the engine reports a problem, shown under the label. |
 | **Corrupted** | The index cannot be read, so it is probably corrupt or locked. The error is shown under the label. Rebuild it. |
+| **Incomplete** | The last rebuild on this server failed part-way, so the index holds only some documents. How many, and the error, are shown under the label. Fix the error and rebuild it. See [Incomplete indexes](../explanation/how-rebuilds-work.md#incomplete-indexes). |
 | **Unknown** | The engine did not say. |
 
 A corrupt index is listed with its error instead of breaking the page.
@@ -52,8 +53,9 @@ indexes.
 
 Choose the information button in the **Actions** column. The sidebar shows:
 
-- **Rebuild history:** the last 20 rebuilds, newest first, with who started each one, when, how
-  long it took, the document counts before and after, the server, and the error of a failure.
+- **Rebuild history:** the last 20 rebuilds, newest first, with who started each one (a user from
+  Search Manager, **At startup**, or **Started outside Search Manager**), when, how long it took,
+  the document counts before and after, the server, and the error of a failure.
 - **Index properties:** what the index reports about itself, such as its analyzer and folder.
 
 ![The details sidebar for ProductIndex, listing five successful rebuilds and the index properties](../images/index-details.png)

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, CompileExploreData, CompileExploreErrors, CompileExploreResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
+import type { AnalyzeData, AnalyzeErrors, AnalyzeResponses, CancelRebuildData, CancelRebuildErrors, CancelRebuildResponses, ClearFinishedRebuildsData, ClearFinishedRebuildsErrors, ClearFinishedRebuildsResponses, CompileExploreData, CompileExploreErrors, CompileExploreResponses, ExplainExploreData, ExplainExploreErrors, ExplainExploreResponses, FindNodesData, FindNodesErrors, FindNodesResponses, GetAnalyzerFieldsData, GetAnalyzerFieldsErrors, GetAnalyzerFieldsResponses, GetExploreFacetsData, GetExploreFacetsErrors, GetExploreFacetsResponses, GetExploreSchemaData, GetExploreSchemaErrors, GetExploreSchemaResponses, GetExploreTargetsData, GetExploreTargetsErrors, GetExploreTargetsResponses, GetExploreTermsData, GetExploreTermsErrors, GetExploreTermsResponses, GetFieldStatisticsData, GetFieldStatisticsErrors, GetFieldStatisticsResponses, GetIndexesData, GetIndexesErrors, GetIndexesResponses, GetLatestRebuildsData, GetLatestRebuildsErrors, GetLatestRebuildsResponses, GetNodePresenceData, GetNodePresenceErrors, GetNodePresenceResponses, GetRebuildHistoryData, GetRebuildHistoryErrors, GetRebuildHistoryResponses, GetRebuildsData, GetRebuildsErrors, GetRebuildsResponses, GetServerData, GetServerErrors, GetServerResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, MatchNodeData, MatchNodeErrors, MatchNodeResponses, ParseExploreInputData, ParseExploreInputErrors, ParseExploreInputResponses, QueueRebuildsData, QueueRebuildsErrors, QueueRebuildsResponses, ReadNativeQueryData, ReadNativeQueryErrors, ReadNativeQueryResponses, SearchExploreData, SearchExploreErrors, SearchExploreResponses, ValidateNativeQueryData, ValidateNativeQueryErrors, ValidateNativeQueryResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -18,11 +18,81 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
 
+export class DiagnoseService {
+    public static analyze<ThrowOnError extends boolean = false>(options: Options<AnalyzeData, ThrowOnError>): RequestResult<AnalyzeResponses, AnalyzeErrors, ThrowOnError> {
+        return (options.client ?? client).post<AnalyzeResponses, AnalyzeErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static getAnalyzerFields<ThrowOnError extends boolean = false>(options: Options<GetAnalyzerFieldsData, ThrowOnError>): RequestResult<GetAnalyzerFieldsResponses, GetAnalyzerFieldsErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetAnalyzerFieldsResponses, GetAnalyzerFieldsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer/fields',
+            ...options
+        });
+    }
+    
+    public static getFieldStatistics<ThrowOnError extends boolean = false>(options: Options<GetFieldStatisticsData, ThrowOnError>): RequestResult<GetFieldStatisticsResponses, GetFieldStatisticsErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetFieldStatisticsResponses, GetFieldStatisticsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/{target}/fields',
+            ...options
+        });
+    }
+    
+    public static matchNode<ThrowOnError extends boolean = false>(options: Options<MatchNodeData, ThrowOnError>): RequestResult<MatchNodeResponses, MatchNodeErrors, ThrowOnError> {
+        return (options.client ?? client).post<MatchNodeResponses, MatchNodeErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/{target}/nodes/{key}/match',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static findNodes<ThrowOnError extends boolean = false>(options?: Options<FindNodesData, ThrowOnError>): RequestResult<FindNodesResponses, FindNodesErrors, ThrowOnError> {
+        return (options?.client ?? client).get<FindNodesResponses, FindNodesErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/nodes',
+            ...options
+        });
+    }
+    
+    public static getNodePresence<ThrowOnError extends boolean = false>(options: Options<GetNodePresenceData, ThrowOnError>): RequestResult<GetNodePresenceResponses, GetNodePresenceErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetNodePresenceResponses, GetNodePresenceErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/diagnose/nodes/{key}',
+            ...options
+        });
+    }
+}
+
 export class ExploreService {
     public static compileExplore<ThrowOnError extends boolean = false>(options: Options<CompileExploreData, ThrowOnError>): RequestResult<CompileExploreResponses, CompileExploreErrors, ThrowOnError> {
         return (options.client ?? client).post<CompileExploreResponses, CompileExploreErrors, ThrowOnError>({
             security: [{ scheme: 'bearer', type: 'http' }],
             url: '/umbraco/search-manager/api/v1/explore/{target}/compile',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static explainExplore<ThrowOnError extends boolean = false>(options: Options<ExplainExploreData, ThrowOnError>): RequestResult<ExplainExploreResponses, ExplainExploreErrors, ThrowOnError> {
+        return (options.client ?? client).post<ExplainExploreResponses, ExplainExploreErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/search-manager/api/v1/explore/{target}/explain',
             ...options,
             headers: {
                 'Content-Type': 'application/json',

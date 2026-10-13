@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { engineLabel, formatBytes, formatCount, healthLook } from "./index-format.js";
+import en from "../lang/en.js";
+import { engineLabel, formatBytes, formatCount, healthLook, incompleteDetailTerm } from "./index-format.js";
 
 describe("formatCount", () => {
   it("groups digits", () => {
@@ -8,6 +9,34 @@ describe("formatCount", () => {
 
   it("shows a dash when the source cannot count", () => {
     expect(formatCount(null)).toBe("-");
+  });
+});
+
+describe("incompleteDetailTerm", () => {
+  it("passes the grouped count and the error", () => {
+    expect(
+      incompleteDetailTerm({ endedAt: "2026-10-13T09:00:00Z", documentsWritten: 1204, error: "Price missing" }),
+    ).toEqual(["searchManager_healthIncompleteDetail", "1,204", "Price missing"]);
+  });
+
+  it("passes empty strings for an unknown count and error", () => {
+    expect(incompleteDetailTerm({ endedAt: "2026-10-13T09:00:00Z" })).toEqual([
+      "searchManager_healthIncompleteDetail",
+      "",
+      "",
+    ]);
+  });
+});
+
+describe("healthIncompleteDetail", () => {
+  const term = en.searchManager.healthIncompleteDetail;
+
+  it("says how many documents were written and why it failed", () => {
+    expect(term("1,204", "Price missing")).toBe("Last rebuild failed after writing 1,204 documents: Price missing");
+  });
+
+  it("leaves out an unknown count and error", () => {
+    expect(term("", "")).toBe("Last rebuild failed part-way");
   });
 });
 

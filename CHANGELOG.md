@@ -6,6 +6,63 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [18.1.0] - 2026-10-13
+
+The same changes as 17.1.0, for Umbraco 18.
+
+## [17.1.0] - 2026-10-13
+
+### Added
+
+- Diagnose > Analyzer: type a text and a search and see, side by side for two indexes, how each
+  index's analyzer turns the text into terms step by step (removed, changed and added terms
+  marked) and whether the search finds it. The verdict runs the query the engine itself builds
+  for the search, so rules such as core Examine looking for searches under 4 characters exactly
+  as typed are applied. Umbraco Search indexes on the Examine provider are covered by the
+  adapter, with the field a free-text search reads offered first.
+- The rebuild history records core Examine rebuilds started outside Search Manager: Umbraco's
+  rebuild of empty indexes after the site starts as **At startup**, and rebuilds from the core
+  Examine dashboard, a language change or another package as **Started outside Search Manager**,
+  with document counts and the error of a failure.
+- An index whose last core Examine rebuild on this server failed part-way shows as
+  **Incomplete**, with the documents it holds and the error, until a rebuild succeeds.
+  `GET /indexes` returns the failure as `failedRebuild`.
+- Explore: **Explain score** in the document drawer explains a result's score in plain words:
+  words and phrases with their term frequency, rarity and field length, filters as "must match"
+  with what they add, excluded chips as "must not match", and coord. Works in raw Lucene mode too.
+  Not available for Umbraco Search indexes, which return no scores.
+- Explore: tick **Compare** on two results and choose **Compare scores** to see their scores part
+  by part, with **Differences only**.
+
+- Diagnose > Fields: the statistics of every field of an index: type, analyzer, coverage and the
+  documents missing it, distinct terms and the five most common terms (dates: earliest and
+  latest). Click a term or a missing count to search for it in Explore. Culture variants, raw
+  copies and system fields show on request. Read from the index's Lucene reader and kept until
+  the index changes. Umbraco Search indexes on the Examine provider are covered by the adapter.
+  The index details sidebar and the Search Manager box on Umbraco Search's index page link to it.
+- Diagnose > Find a node: look a document up by name, id or key and see, for every index, whether
+  it holds the document (and in which cultures), why not (not published, in the recycle bin,
+  outside the index's part of the tree, protected, document type left out, or the index is out
+  of date), and whether its copy is stale. Test a search against the document: the overall
+  verdict and, per chip, matched or not with the document's value of the field. Umbraco Search
+  indexes are covered by the adapter.
+- A "Show in search indexes" action on documents in the content tree, for users with Settings
+  access, opens the same answer in a sidebar.
+
+### Changed
+
+- Explore: the fields panel counts a field without its own filters, so after picking a value the
+  field's other values stay listed with their counts.
+- Explore: suggested and counted values show as the editor wrote them (`blogPost`, not
+  `blogpost`).
+- Explore: Umbraco Search indexes start on the site's default language; **No culture (invariant
+  content only)** searches content that does not vary.
+
+### Fixed
+
+- Explore: chips the server left out of a search are now struck through with the reason.
+- Explore: "1 document" instead of "1 documents".
+
 ## [18.0.0] - 2026-10-12
 
 The first release for Umbraco 18, with the same features as 17.0.0.
