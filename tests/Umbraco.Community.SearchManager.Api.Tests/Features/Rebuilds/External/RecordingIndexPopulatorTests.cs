@@ -46,8 +46,8 @@ public class RecordingIndexPopulatorTests
         IIndex products = Index("ProductIndex");
         IIndex external = Index("ExternalIndex");
         IIndex members = Index("MembersIndex");
-        _recorder.Begin(products, RebuildTrigger.Startup);
-        _recorder.Begin(members, RebuildTrigger.Startup);
+        _recorder.Begin(products, RebuildTrigger.Other);
+        _recorder.Begin(members, RebuildTrigger.Other);
         IIndexPopulator inner = Substitute.For<IIndexPopulator>();
         inner.IsRegistered(products).Returns(true);
         inner.IsRegistered(external).Returns(true);

@@ -217,7 +217,7 @@ public class RecordingIndexRebuilderTests
         // Arrange
         AddIndex("ExternalIndex", 0, 50, exists: true);
         AddIndex("InternalIndex", 70, 70, exists: true);
-        AddIndex("ProductIndex", 0, 0, exists: false);
+        AddIndex("ProductIndex", 0, 5, exists: false);
         AddIndex("CustomIndex", 0, 0, exists: false, canRebuild: false);
 
         // Act
@@ -229,6 +229,59 @@ public class RecordingIndexRebuilderTests
             [("ExternalIndex", RebuildTrigger.Startup), ("ProductIndex", RebuildTrigger.Startup)],
             _history.Entries.Select(entry => (entry.IndexName, entry.Trigger))
         );
+    }
+
+    [Fact]
+    public async Task RebuildIndexesAsync_StartupRunOfAnIndexWithNothingToIndex_IsNotRecorded()
+    {
+        // Arrange
+        AddIndex("MembersIndex", 0, 0, exists: true);
+        AddIndex("ProductIndex", 0, 60, exists: false);
+
+        // Act
+        await Rebuilder()
+            .RebuildIndexesAsync(true, TimeSpan.FromMilliseconds(1), useBackgroundThread: false);
+
+        // Assert
+        Assert.Equal(["ProductIndex"], _history.Entries.Select(entry => entry.IndexName));
+    }
+
+    [Fact]
+    public async Task RebuildIndexesAsync_FailedStartupRunThatWroteNothing_IsRecorded()
+    {
+        // Arrange
+        IIndex index = AddIndex("ProductIndex", 0, 0, exists: false);
+        _inner
+            .RebuildIndexesAsync(Arg.Any<bool>(), Arg.Any<TimeSpan?>(), false)
+            .Returns(_ =>
+            {
+                _recorder.Fail(index.Name, "Price missing");
+                return Attempt.Succeed(IndexRebuildResult.Success);
+            });
+
+        // Act
+        await Rebuilder()
+            .RebuildIndexesAsync(true, TimeSpan.FromMilliseconds(1), useBackgroundThread: false);
+
+        // Assert
+        RebuildHistoryEntry entry = Assert.Single(_history.Entries);
+        Assert.Equal(
+            (RebuildTrigger.Startup, RebuildStatus.Failed, (long?)0),
+            (entry.Trigger, entry.Outcome, entry.DocumentsAfter)
+        );
+    }
+
+    [Fact]
+    public async Task RebuildIndexAsync_OtherRunThatWroteNothing_IsRecorded()
+    {
+        // Arrange
+        AddIndex("MembersIndex", 0, 0);
+
+        // Act
+        await Rebuilder().RebuildIndexAsync("MembersIndex", useBackgroundThread: false);
+
+        // Assert
+        Assert.Equal(RebuildTrigger.Other, Assert.Single(_history.Entries).Trigger);
     }
 
     [Fact]

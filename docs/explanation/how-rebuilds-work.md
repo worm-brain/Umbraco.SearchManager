@@ -72,6 +72,8 @@ Rebuilds started elsewhere are recorded too:
   (of every index after a cold boot) is recorded as **At startup**. Rebuilds from the core
   Examine dashboard, a language change or another package are recorded as **Started outside
   Search Manager**. Both carry the document counts before and after, and a failure with its error.
+  A startup rebuild of an index with nothing to index, such as `MembersIndex` on a site without
+  members, is not recorded unless it fails: Umbraco repeats it on every start.
 - **Umbraco Search indexes.** Rebuilds started from Umbraco Search's own index page, by a content
   type change or on another server are recorded as **Started outside Search Manager**, always as
   succeeded and without document counts, because Umbraco Search does not announce failures.

@@ -85,8 +85,10 @@ internal sealed class CoreRebuildRecorder(
 
     /// <summary>
     /// Stops tracking the run and records it: failed when <paramref name="exception"/> is set or a
-    /// failure was noted, otherwise succeeded. Never throws; a history that cannot be written is
-    /// logged.
+    /// failure was noted, otherwise succeeded. A successful startup run that went from 0 to 0
+    /// documents is not recorded: an index with nothing to index (such as <c>MembersIndex</c> on a
+    /// site without members) is rebuilt on every start, and would push real runs out of its history.
+    /// Never throws; a history that cannot be written is logged.
     /// </summary>
     /// <param name="indexName">The index.</param>
     /// <param name="exception">What the rebuild threw, if anything.</param>
@@ -108,6 +110,15 @@ internal sealed class CoreRebuildRecorder(
             // Synchronous processing has committed every write; this waits for the reader to see them.
             (run.Index as LuceneIndex)?.WaitForChanges();
 
+            long? documentsAfter = ReadCount(run.Index);
+            bool emptyStartup =
+                run is { Trigger: RebuildTrigger.Startup, Error: null, DocumentsBefore: 0 }
+                && documentsAfter == 0;
+            if (emptyStartup)
+            {
+                return;
+            }
+
             history.Add(
                 new RebuildHistoryEntry(
                     run.Index.Name,
@@ -119,7 +130,7 @@ internal sealed class CoreRebuildRecorder(
                     timeProvider.GetUtcNow(),
                     run.Error is null ? RebuildStatus.Succeeded : RebuildStatus.Failed,
                     run.DocumentsBefore,
-                    ReadCount(run.Index),
+                    documentsAfter,
                     run.Error,
                     run.Index is IUmbracoMemberIndex
                 )

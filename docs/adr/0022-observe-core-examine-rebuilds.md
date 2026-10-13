@@ -56,6 +56,10 @@ failed part-way, which needs to know about every failed core rebuild, wherever i
   rethrown.
 - Trigger: `Startup` for the first multi-index rebuild with a delay in the process, `Other` for
   everything else. A new `RebuildTrigger.Startup` value; the column is a string, so no migration.
+- A successful startup run that went from 0 to 0 documents is not recorded: an index with nothing
+  to index (`MembersIndex` on a site without members) is "empty" on every start, so Umbraco
+  rebuilds it every time, and those rows would push real runs out of its 20. Failed startup runs,
+  and any run with documents, are recorded.
 - While tracked, a Lucene index runs in synchronous mode, as Search Manager's own runs do (ADR
   0011), so the document count read at the end is final. `IndexingError` and populator failures
   (through the wrapper) fail the run with the first message.
