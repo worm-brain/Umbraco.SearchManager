@@ -16,7 +16,12 @@ public enum ExploreTargetKind
 /// <summary>What Explore can do with a target, beyond searching it with chips.</summary>
 /// <param name="NativeQuery">Raw Lucene filters and native mode are available (a Lucene searcher).</param>
 /// <param name="TermStatistics">Term and coverage statistics can be read (a Lucene searcher).</param>
-public sealed record ExploreCapabilities(bool NativeQuery, bool TermStatistics);
+/// <param name="ExplainScore">A result's score can be explained (a Lucene searcher, ADR 0020).</param>
+public sealed record ExploreCapabilities(
+    bool NativeQuery,
+    bool TermStatistics,
+    bool ExplainScore = false
+);
 
 /// <summary>One index or searcher the Explore view can search.</summary>
 /// <param name="Name">The index or searcher name; unique across sources.</param>
@@ -44,13 +49,18 @@ public sealed record ExploreTarget(
 /// Chips the source cannot run, with the reason (ADR 0016); the client draws them disabled and
 /// does not send them.
 /// </param>
+/// <param name="DefaultCulture">
+/// The culture the picker starts on, or null for none (ADR 0021): Umbraco Search returns one
+/// document per culture, so it starts on the site's default language.
+/// </param>
 public sealed record ExploreSchema(
     IReadOnlyList<IndexField> Fields,
     IReadOnlyList<FieldAlias> Aliases,
     IReadOnlyList<FieldTypeOperators> Operators,
     IReadOnlyList<string> Cultures,
     long? DocumentCount,
-    IReadOnlyList<UnsupportedFilter> Unsupported
+    IReadOnlyList<UnsupportedFilter> Unsupported,
+    string? DefaultCulture = null
 );
 
 /// <summary>A search request from the Explore view.</summary>
@@ -179,6 +189,15 @@ public interface IExploreSource
     /// <returns>ISO culture codes.</returns>
     Task<IReadOnlyList<string>> GetCulturesAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The culture the picker starts on for this engine (ADR 0021). The default implementation
+    /// returns null: no culture, every document.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>An ISO culture code, or null.</returns>
+    Task<string?> GetDefaultCultureAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
+
     /// <summary>The operators this engine runs per field type.</summary>
     IReadOnlyList<FieldTypeOperators> Operators { get; }
 
@@ -260,6 +279,23 @@ public interface IExploreSource
         string query,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Explains why documents scored as they did under the query a search with the same request
+    /// runs (ADR 0020). Only for targets with <see cref="ExploreCapabilities.ExplainScore"/>; the
+    /// default implementation refuses.
+    /// </summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="request">The chips, culture or raw query, and the ids.</param>
+    /// <param name="cancellationToken">Cancels the explanation.</param>
+    /// <returns>One explanation per id, in order.</returns>
+    /// <exception cref="NotSupportedException">The target's scores cannot be explained.</exception>
+    /// <exception cref="InvalidNativeQueryException">The raw query or a raw Lucene chip does not parse.</exception>
+    Task<ExplainResult> ExplainAsync(
+        ExploreTarget target,
+        ExplainRequest request,
+        CancellationToken cancellationToken
+    ) => throw new NotSupportedException($"{target?.Name} scores cannot be explained");
 
     /// <summary>Turns a raw query back into chips, leaving what has no chip form as raw.</summary>
     /// <param name="target">A target this source listed.</param>

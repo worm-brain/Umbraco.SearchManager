@@ -3,7 +3,11 @@ namespace Umbraco.Community.SearchManager.Core.Explore;
 /// <summary>One value of a field and how many documents have it.</summary>
 /// <param name="Value">The value as a chip takes it: the term, a decoded number, or a relative date such as <c>-7d</c>.</param>
 /// <param name="Count">Documents with the value.</param>
-public sealed record TermCount(string Value, long Count);
+/// <param name="Display">
+/// The value as an editor wrote it, when the index lower-cases it (<c>blogPost</c> for the term
+/// <c>blogpost</c>); for display only, chips keep sending <paramref name="Value"/> (ADR 0021).
+/// </param>
+public sealed record TermCount(string Value, long Count, string? Display = null);
 
 /// <summary>A field's most common values, for the search box's value suggestions.</summary>
 /// <param name="Field">The field.</param>

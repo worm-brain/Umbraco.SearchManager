@@ -15,10 +15,15 @@ import { resolveField } from "./filters.js";
  * The name opens the document drawer; the icon beside it links to the item's editor. Not bound
  * to a manifest; the Explore view renders it and owns the page, columns and open document.
  *
+ * When the target explains scores ({@link canCompare}) and the results are ranked, a "Compare"
+ * column of `uui-checkbox`es picks up to two results (a third stays disabled) and "Compare
+ * scores" in the header opens their comparison once exactly two are picked.
+ *
  * @element search-manager-results
  * @fires search-manager-open-document - `CustomEvent<string | undefined>` with the hit id to show, or none to close.
  * @fires search-manager-page-change - `CustomEvent<number>` with the page to load, from 1.
  * @fires search-manager-columns-change - `CustomEvent<Array<string>>` with the picked extra columns.
+ * @fires search-manager-compare - `CustomEvent<[string, string]>` with the two ids to compare.
  */
 @customElement("search-manager-results")
 export class SearchManagerResultsElement extends UmbLitElement {
@@ -42,8 +47,39 @@ export class SearchManagerResultsElement extends UmbLitElement {
   @property({ attribute: false })
   openDocument?: string;
 
+  /** Whether the target explains scores, so ranked results can be compared. */
+  @property({ type: Boolean })
+  canCompare = false;
+
+  /** The ids being compared (`cmp` in the URL); their boxes start ticked. */
+  @property({ attribute: false })
+  compare?: [string, string];
+
   @state()
   private _columnFilter = "";
+
+  /** The ids ticked in the "Compare" column, at most two, in the order ticked. */
+  @state()
+  private _picked: Array<string> = [];
+
+  /**
+   * Keeps the ticked boxes in step: the compared pair when it changes, and only ids still on the
+   * page when the results change.
+   *
+   * @param changed - The properties that changed.
+   */
+  override willUpdate(changed: Map<PropertyKey, unknown>): void {
+    super.willUpdate(changed);
+    if (changed.has("compare") && this.compare) this._picked = [...this.compare];
+    if (changed.has("result")) {
+      const ids = new Set(this.result?.hits.map((hit) => hit.id) ?? []);
+      this._picked = this._picked.filter((id) => ids.has(id));
+    }
+  }
+
+  #togglePick(id: string, on: boolean): void {
+    this._picked = on ? [...this._picked, id].slice(0, 2) : this._picked.filter((picked) => picked !== id);
+  }
 
   #fire<T>(type: string, detail: T): void {
     this.dispatchEvent(new CustomEvent<T>(type, { detail, bubbles: true, composed: true }));
@@ -67,6 +103,7 @@ export class SearchManagerResultsElement extends UmbLitElement {
     // Results sorted newest first (no ranking clause) come back without scores, and so do
     // engines that rank without exposing scores (Umbraco Search).
     const ranked = result.hits.some((hit) => hit.score != null);
+    const comparable = this.canCompare && ranked && !result.newestFirst;
 
     return html`
       <div class="header">
@@ -77,7 +114,19 @@ export class SearchManagerResultsElement extends UmbLitElement {
               : this.localize.term("searchManager_resultsCount", result.total)
           }
         </strong>
-        ${this.#renderColumnPicker()}
+        <div class="header-actions">
+          ${
+            comparable
+              ? html`<uui-button
+                  look="secondary"
+                  label=${this.localize.term("searchManager_compareButton")}
+                  ?disabled=${this._picked.length !== 2}
+                  @click=${() => this.#fire("search-manager-compare", [...this._picked])}
+                ></uui-button>`
+              : nothing
+          }
+          ${this.#renderColumnPicker()}
+        </div>
       </div>
       ${
         result.hits.length === 0
@@ -86,6 +135,13 @@ export class SearchManagerResultsElement extends UmbLitElement {
               <div class="scroll">
                 <uui-table aria-label=${this.localize.term("searchManager_resultsLabel")}>
                   <uui-table-head>
+                    ${
+                      comparable
+                        ? html`<uui-table-head-cell
+                            >${this.localize.term("searchManager_compareColumn")}</uui-table-head-cell
+                          >`
+                        : nothing
+                    }
                     <uui-table-head-cell>${this.localize.term("searchManager_columnScore")}</uui-table-head-cell>
                     <uui-table-head-cell>${this.localize.term("searchManager_columnId")}</uui-table-head-cell>
                     <uui-table-head-cell>${this.localize.term("searchManager_columnName")}</uui-table-head-cell>
@@ -94,7 +150,7 @@ export class SearchManagerResultsElement extends UmbLitElement {
                     <uui-table-head-cell>${this.localize.term("searchManager_columnUpdated")}</uui-table-head-cell>
                     ${this.columns.map((column) => html`<uui-table-head-cell class="mono">${column}</uui-table-head-cell>`)}
                   </uui-table-head>
-                  ${result.hits.map((hit) => this.#renderRow(hit, maxScore, ranked))}
+                  ${result.hits.map((hit) => this.#renderRow(hit, maxScore, ranked, comparable))}
                 </uui-table>
               </div>
             `
@@ -112,13 +168,14 @@ export class SearchManagerResultsElement extends UmbLitElement {
     `;
   }
 
-  #renderRow(hit: ExploreHit, maxScore: number, ranked: boolean) {
+  #renderRow(hit: ExploreHit, maxScore: number, ranked: boolean, comparable: boolean) {
     const name = hit.name ?? hit.id;
     const path = editorPath(hit);
     const open = this.openDocument === hit.id;
     const score = ranked && hit.score != null ? hit.score : undefined;
     return html`
       <uui-table-row class=${open ? "open" : ""}>
+        ${comparable ? this.#renderPick(hit.id, name) : nothing}
         <uui-table-cell class="nowrap">
           ${
             score === undefined
@@ -162,6 +219,21 @@ export class SearchManagerResultsElement extends UmbLitElement {
         ${this.columns.map((column) => html`<uui-table-cell>${this.#cell(hit, column)}</uui-table-cell>`)}
       </uui-table-row>
     `;
+  }
+
+  /** The "Compare" box of one row; a third box stays disabled while two are ticked. */
+  #renderPick(id: string, name: string) {
+    const checked = this._picked.includes(id);
+    const full = !checked && this._picked.length >= 2;
+    return html`<uui-table-cell>
+      <uui-checkbox
+        aria-label=${this.localize.term("searchManager_compareSelect", name)}
+        title=${full ? this.localize.term("searchManager_compareLimit") : ""}
+        .checked=${checked}
+        ?disabled=${full}
+        @change=${(event: Event) => this.#togglePick(id, (event.target as HTMLInputElement).checked)}
+      ></uui-checkbox>
+    </uui-table-cell>`;
   }
 
   /** A picked column's text: values joined, dates stored as ticks shown as dates. */
@@ -219,6 +291,11 @@ export class SearchManagerResultsElement extends UmbLitElement {
         justify-content: space-between;
         gap: var(--uui-size-space-4);
         margin-bottom: var(--uui-size-space-3);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: var(--uui-size-space-2);
       }
 
       .scroll {

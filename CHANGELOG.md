@@ -15,6 +15,26 @@ All notable changes to this project are documented here. The format follows
 - An index whose last core Examine rebuild on this server failed part-way shows as
   **Incomplete**, with the documents it holds and the error, until a rebuild succeeds.
   `GET /indexes` returns the failure as `failedRebuild`.
+- Explore: **Explain score** in the document drawer explains a result's score in plain words:
+  words and phrases with their term frequency, rarity and field length, filters as "must match"
+  with what they add, excluded chips as "must not match", and coord. Works in raw Lucene mode too.
+  Not available for Umbraco Search indexes, which return no scores.
+- Explore: tick **Compare** on two results and choose **Compare scores** to see their scores part
+  by part, with **Differences only**.
+
+### Changed
+
+- Explore: the fields panel counts a field without its own filters, so after picking a value the
+  field's other values stay listed with their counts.
+- Explore: suggested and counted values show as the editor wrote them (`blogPost`, not
+  `blogpost`).
+- Explore: Umbraco Search indexes start on the site's default language; **No culture (invariant
+  content only)** searches content that does not vary.
+
+### Fixed
+
+- Explore: chips the server left out of a search are now struck through with the reason.
+- Explore: "1 document" instead of "1 documents".
 
 ## [18.0.0] - 2026-10-12
 

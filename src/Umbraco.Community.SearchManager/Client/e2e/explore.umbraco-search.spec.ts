@@ -35,3 +35,31 @@ test("adds a Search Manager box to Umbraco Search's index page", async ({ page }
 
   await expect(page).toHaveURL(/search-manager\/view\/explore\?index=Umb_PublishedContent/);
 });
+
+test("Explain score is unavailable with the reason", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+  await page.locator("uui-select#culture select").selectOption("en-US");
+  await waitForSeededIndex(page, 10);
+
+  await page.locator("search-manager-results button.open").first().click();
+
+  const drawer = page.locator("search-manager-document-drawer");
+  await expect(drawer.getByText("Umbraco Search does not return scores").first()).toBeVisible();
+});
+
+test("starts on the site's default culture", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+
+  await expect(page.locator("uui-select#culture select")).toHaveValue("en-US");
+  await waitForSeededIndex(page, 10);
+});
+
+test("strikes through a chip the server left out", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+  await waitForSeededIndex(page, 10);
+
+  await searchBox(page).fill("type:nosuchtype");
+  await searchBox(page).press("Enter");
+
+  await expect(page.locator("search-manager-filter-chip uui-tag.disabled")).toHaveCount(1);
+});

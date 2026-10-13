@@ -15,13 +15,17 @@ import { SearchManagerAddFilterEvent, SearchManagerFiltersChangeEvent } from "./
 import {
   createExploreState,
   decodeExploreState,
+  effectiveCulture,
   encodeExploreState,
   mergeIntoSearch,
   PAGE_SIZE,
   type ExploreViewState,
 } from "./explore-state.js";
-import { appendFilters, disabledReason, toggleFilter } from "./filters.js";
+import { appendFilters, chipReasons, disabledReason, toggleFilter } from "./filters.js";
 import "./document-drawer.element.js";
+import "./score-compare.element.js";
+import type { CompareDocument } from "./score-compare.element.js";
+import type { SentQuery } from "./score-explain.js";
 import "./fields-panel.element.js";
 import "./results.element.js";
 import "./search-box.element.js";
@@ -33,20 +37,35 @@ import { chipsAfterNative, nativeStart } from "./native-mode.js";
 const DEFAULT_TARGET = "ExternalIndex";
 
 /**
+ * What a change of search closes: the open document, its score explanation and a comparison,
+ * all of which belong to the previous results.
+ */
+const CLOSED: Pick<ExploreViewState, "doc" | "explain" | "compare"> = {
+  doc: undefined,
+  explain: undefined,
+  compare: undefined,
+};
+
+/**
  * The Explore tab: search an index or searcher with filter chips.
  *
  * - **Pickers:** the targets from `GET /explore/targets` (indexes, then searchers registered on
- *   their own) and the site's cultures; the culture switches culture-variant fields.
+ *   their own) and the site's cultures; the culture switches culture-variant fields. With no
+ *   culture in the URL, requests use the schema's default culture; "No culture" is explicit.
  * - **Search box:** chips from `POST /explore/{target}/parse`; chips the target cannot run are
- *   drawn disabled and not sent.
+ *   drawn disabled and not sent. Chips the server skipped are drawn disabled with its reason,
+ *   but still sent, so the server's indexes keep pointing at the same chips.
  * - **Results:** `POST /explore/{target}/search` on every change of target, culture, chips or
  *   page; a newer search aborts the one in flight. The drawer shows the open document's fields.
  * - **Native mode:** "Lucene" (offered for Lucene searchers only) moves the last query into a raw
  *   Lucene box; "Back to filters" turns it into chips again with `POST /read-native`. While it is
  *   on, searches send the raw query instead of the chips.
  * - **Show query:** the panel shows the query sent, as parsed, and as C#.
+ * - **Scores:** the drawer's "Explain score" and the results' "Compare scores" run the query the
+ *   last search sent ({@link _query}) again through `POST /explore/{target}/explain`; the
+ *   comparison takes the drawer's place.
  * - **URL:** the whole view (index, culture, chips, raw query, columns, open document, page, show
- *   query) is written to the query string with `replaceState` and read back when the tab opens,
+ *   query, explanation, comparison) is written to the query string with `replaceState` and read back when the tab opens,
  *   so a link reopens it.
  *
  * Bound by the `Umbraco.Community.SearchManager.WorkspaceView.Explore` manifest.
@@ -76,6 +95,18 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
   /** The chips the last search sent; kept as the same array while they do not change. */
   @state()
   private _sent: Array<Filter> = [];
+
+  /**
+   * The query the last search sent, for explanations: their `filterIndex` and `mustNotMatch`
+   * index into its `filters`. Kept as the same object while it does not change (paging), so the
+   * drawer does not explain again.
+   */
+  @state()
+  private _query?: SentQuery;
+
+  /** The query {@link _result} answered, so its `skipped` indexes are only applied to it. */
+  @state()
+  private _resultQuery?: SentQuery;
 
   #search?: AbortController;
   #schemaFor?: string;
@@ -150,13 +181,18 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
           ? [{ kind: "Lucene", field: null, op: "Contains", value: native, exclude: false }]
           : [];
     if (JSON.stringify(sent) !== JSON.stringify(this._sent)) this._sent = sent;
+    // The request body without paging; the server's filter indexes refer to its `filters`.
+    const query: SentQuery = {
+      filters: native === undefined ? filters : [],
+      native: native ?? null,
+      culture: effectiveCulture(this._state.culture, this._schema) ?? null,
+    };
+    if (JSON.stringify(query) !== JSON.stringify(this._query)) this._query = query;
     this._loading = true;
     const { data, error, response } = await ExploreService.searchExplore({
       path: { target: target.name },
       body: {
-        filters: native === undefined ? filters : [],
-        native: native ?? null,
-        culture: this._state.culture ?? null,
+        ...query,
         skip: (this._state.page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
       },
@@ -166,6 +202,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     this._loading = false;
     if (data) {
       this._result = data;
+      this._resultQuery = query;
       this._error = undefined;
     } else {
       this._error = this.localize.term("searchManager_searchError", describeError(error, response));
@@ -203,7 +240,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
    * part of it, so they are kept to come back when native mode closes.
    */
   #enterNative(): void {
-    this.#update({ native: nativeStart(this._result?.query), page: 1, doc: undefined });
+    this.#update({ native: nativeStart(this._result?.query), page: 1, ...CLOSED });
   }
 
   /** Closes native mode, turning the raw query back into chips. */
@@ -226,7 +263,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       this._error = this.localize.term("searchManager_nativeReadError", describeError(error, response));
       return;
     }
-    this.#update({ native: undefined, filters: chipsAfterNative(data.filters, disabled), page: 1, doc: undefined });
+    this.#update({ native: undefined, filters: chipsAfterNative(data.filters, disabled), page: 1, ...CLOSED });
   }
 
   /**
@@ -246,7 +283,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
   }
 
   #setFilters(filters: Array<Filter>): void {
-    this.#update({ filters, page: 1, doc: undefined });
+    this.#update({ filters, page: 1, ...CLOSED });
   }
 
   /**
@@ -264,6 +301,9 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     const target = this.#target;
     const native = this._state.native !== undefined && (target?.capabilities.nativeQuery ?? false);
     const openHit = this._result?.hits.find((hit) => hit.id === this._state.doc);
+    const culture = effectiveCulture(this._state.culture, this._schema);
+    const reasons = this.#chipReasons(target);
+    const compared = this.#comparedDocuments();
     return html`
       <uui-box class="query">
         <div class="pickers">${this.#renderTargetPicker(target)} ${this.#renderCulturePicker()}</div>
@@ -274,12 +314,13 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
                   .target=${target}
                   .query=${this._state.native ?? ""}
                   @search-manager-native-run=${(event: CustomEvent<string>) =>
-                    this.#update({ native: event.detail, page: 1, doc: undefined })}
+                    this.#update({ native: event.detail, page: 1, ...CLOSED })}
                 ></search-manager-native-box>`
               : html`<search-manager-search-box
                   .target=${target}
                   .schema=${this._schema}
                   .filters=${this._state.filters}
+                  .reasons=${reasons}
                   @search-manager-filters-change=${(event: SearchManagerFiltersChangeEvent) =>
                     this.#setFilters(event.filters)}
                 ></search-manager-search-box>`
@@ -301,8 +342,8 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
                 .target=${target}
                 .schema=${this._schema}
                 .filters=${native ? [] : this._sent}
-                .notSent=${native ? [] : this.#notSent(target)}
-                .culture=${this._state.culture}
+                .notSent=${native ? [] : this.#notSent(reasons)}
+                .culture=${culture}
                 .native=${native ? (this._state.native ?? "") : undefined}
               ></search-manager-show-query-panel>`
             : nothing
@@ -310,16 +351,28 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
       </uui-box>
       ${this._loading && !this._result ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
       <div
-        class=${openHit ? "main drawer-open" : "main"}
+        class=${openHit || compared ? "main drawer-open" : "main"}
         @search-manager-add-filter=${(event: SearchManagerAddFilterEvent) => void this.#addFilter(event)}
-        @search-manager-open-document=${(event: CustomEvent<string | undefined>) => this.#update({ doc: event.detail })}
+        @search-manager-open-document=${(event: CustomEvent<string | undefined>) =>
+          // Another document keeps its explanation open; closing the drawer closes it.
+          this.#update({
+            doc: event.detail,
+            explain: event.detail ? this._state.explain : undefined,
+            compare: undefined,
+          })}
+        @search-manager-explain-toggle=${(event: CustomEvent<boolean>) =>
+          this.#update({ explain: event.detail || undefined })}
+        @search-manager-compare=${(event: CustomEvent<[string, string] | undefined>) =>
+          this.#update(
+            event.detail ? { compare: event.detail, doc: undefined, explain: undefined } : { compare: undefined },
+          )}
       >
         <search-manager-fields-panel
           .target=${target}
           .schema=${this._schema}
           .filters=${this._sent}
           .allFilters=${native ? [] : this._state.filters}
-          .culture=${this._state.culture}
+          .culture=${culture}
         ></search-manager-fields-panel>
         <uui-box class="results">
           <search-manager-results
@@ -328,35 +381,68 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
             .columns=${this._state.columns}
             .page=${this._state.page}
             .openDocument=${this._state.doc}
-            @search-manager-page-change=${(event: CustomEvent<number>) => this.#update({ page: event.detail, doc: undefined })}
+            .canCompare=${target?.capabilities.explainScore ?? false}
+            .compare=${this._state.compare}
+            @search-manager-page-change=${(event: CustomEvent<number>) => this.#update({ page: event.detail, ...CLOSED })}
             @search-manager-columns-change=${(event: CustomEvent<Array<string>>) => this.#update({ columns: event.detail })}
           ></search-manager-results>
         </uui-box>
         ${
-          openHit
-            ? html`<search-manager-document-drawer
-                aria-label=${this.localize.term("searchManager_documentLabel")}
-                .hit=${openHit}
+          compared
+            ? html`<search-manager-score-compare
+                aria-label=${this.localize.term("searchManager_compareTitle")}
+                .target=${target}
+                .query=${this._query}
+                .documents=${compared}
                 .schema=${this._schema}
-                .targetName=${target?.name ?? ""}
-              ></search-manager-document-drawer>`
-            : nothing
+              ></search-manager-score-compare>`
+            : openHit
+              ? html`<search-manager-document-drawer
+                  aria-label=${this.localize.term("searchManager_documentLabel")}
+                  .hit=${openHit}
+                  .schema=${this._schema}
+                  .target=${target}
+                  .query=${this._query}
+                  ?explain=${this._state.explain ?? false}
+                ></search-manager-document-drawer>`
+              : nothing
         }
       </div>
     `;
   }
 
-  /** The chips left out of the query, with why, for the show-query panel. */
-  #notSent(target: ExploreTarget): Array<{ filter: Filter; reason: string }> {
+  /**
+   * The two documents being compared, named from the current results; one that is not on this
+   * page (a shared link) is named by its id.
+   */
+  #comparedDocuments(): [CompareDocument, CompareDocument] | undefined {
+    const ids = this._state.compare;
+    if (!ids) return undefined;
+    const named = (id: string): CompareDocument => ({
+      id,
+      name: this._result?.hits.find((hit) => hit.id === id)?.name ?? id,
+    });
+    return [named(ids[0]), named(ids[1])];
+  }
+
+  /**
+   * Why each chip does not run: the client's reasons, plus the server's for the chips the last
+   * search skipped, but only while that result answers the chips sent now.
+   */
+  #chipReasons(target: ExploreTarget | undefined): Array<string | undefined> {
     const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
-    const fromServer = new Map((this._result?.skipped ?? []).map((skip) => [skip.index, skip.reason]));
-    let sentIndex = 0;
-    return this._state.filters.flatMap((filter) => {
-      const reason = disabledReason(filter, this._schema, target, term);
-      if (reason) return [{ filter, reason }];
-      // The server's skipped list indexes the chips it was sent.
-      const serverReason = fromServer.get(sentIndex++);
-      return serverReason ? [{ filter, reason: serverReason }] : [];
+    const server =
+      this._result && this._resultQuery
+        ? { filters: this._resultQuery.filters, skipped: this._result.skipped }
+        : undefined;
+    return chipReasons(this._state.filters, this._schema, target, server, term);
+  }
+
+  /** The chips left out of the query, or skipped by the server, with why, for the show-query panel. */
+  #notSent(reasons: ReadonlyArray<string | undefined>): Array<{ filter: Filter; reason: string }> {
+    return this._state.filters.flatMap((filter, index) => {
+      const reason = reasons[index];
+      return reason ? [{ filter, reason }] : [];
     });
   }
 
@@ -403,7 +489,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
             this.#update({
               target: (event.target as HTMLSelectElement).value,
               page: 1,
-              doc: undefined,
+              ...CLOSED,
               columns: [],
               native: undefined,
             })}
@@ -412,12 +498,22 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     `;
   }
 
+  /**
+   * The culture picker, preselecting the culture requests use. With a default culture the empty
+   * option is an explicit "no culture"; without one it is the plain "All cultures" it always was.
+   */
   #renderCulturePicker() {
     const cultures = this._schema?.cultures ?? [];
     if (cultures.length === 0) return nothing;
+    const hasDefault = !!this._schema?.defaultCulture;
+    const selected = effectiveCulture(this._state.culture, this._schema)?.toLowerCase();
     const options: Array<SelectOption> = [
-      { name: this.localize.term("searchManager_exploreAllCultures"), value: "", selected: !this._state.culture },
-      ...cultures.map((culture) => ({ name: culture, value: culture, selected: culture === this._state.culture })),
+      {
+        name: this.localize.term(hasDefault ? "searchManager_exploreNoCulture" : "searchManager_exploreAllCultures"),
+        value: "",
+        selected: selected === undefined,
+      },
+      ...cultures.map((culture) => ({ name: culture, value: culture, selected: culture.toLowerCase() === selected })),
     ];
     return html`
       <div class="picker">
@@ -427,7 +523,11 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
           label=${this.localize.term("searchManager_exploreCulture")}
           .options=${options}
           @change=${(event: Event) =>
-            this.#update({ culture: (event.target as HTMLSelectElement).value || undefined, page: 1 })}
+            this.#update({
+              // With a default culture, "no culture" is written as culture= or it reads back as the default.
+              culture: (event.target as HTMLSelectElement).value || (hasDefault ? null : undefined),
+              page: 1,
+            })}
         ></uui-select>
       </div>
     `;
@@ -492,7 +592,8 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
         max-width: 22rem;
       }
 
-      search-manager-document-drawer {
+      search-manager-document-drawer,
+      search-manager-score-compare {
         flex: 1 1 24rem;
         max-width: 36rem;
       }

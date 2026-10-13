@@ -3,6 +3,7 @@ using Examine.Lucene.Indexing;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
+using Umbraco.Cms.Infrastructure.Examine;
 using Umbraco.Community.SearchManager.Core.Explore;
 
 namespace Umbraco.Community.SearchManager.Features.Explore;
@@ -54,7 +55,7 @@ internal static class LuceneTerms
                 }
             }
         );
-        return (Order(top, take), sampled);
+        return (WithDisplay(reader, field, valueType, Order(top, take), null), sampled);
     }
 
     /// <summary>Counts a field's values over a set of documents.</summary>
@@ -98,7 +99,7 @@ internal static class LuceneTerms
                 }
             }
         );
-        return (Order(counts, take), sampled);
+        return (WithDisplay(reader, field, valueType, Order(counts, take), documents), sampled);
     }
 
     /// <summary>Collects the documents a query matches.</summary>
@@ -192,6 +193,72 @@ internal static class LuceneTerms
             default:
                 return term.Utf8ToString();
         }
+    }
+
+    /// <summary>
+    /// Adds the value as an editor wrote it to terms the index lower-cased (ADR 0021): the
+    /// <c>__Raw_</c> copy or the stored field of the first live document with the term, when one
+    /// of its values equals the term ignoring case but not exactly (<c>blogPost</c> for
+    /// <c>blogpost</c>). Analysed text, whose stored value is a whole sentence, keeps none.
+    /// </summary>
+    /// <param name="reader">The index reader.</param>
+    /// <param name="field">The field.</param>
+    /// <param name="valueType">How Examine writes the field; numbers and dates are left alone.</param>
+    /// <param name="terms">The terms to return.</param>
+    /// <param name="documents">The documents counted, to read a document among them; null for any.</param>
+    /// <returns>The terms, with <see cref="TermCount.Display"/> where it differs.</returns>
+    private static List<TermCount> WithDisplay(
+        IndexReader reader,
+        string field,
+        IIndexFieldValueType? valueType,
+        List<TermCount> terms,
+        FixedBitSet? documents
+    )
+    {
+        if (valueType is Int32Type or SingleType or Int64Type or DoubleType or DateTimeType)
+        {
+            return terms;
+        }
+
+        IBits? live = MultiFields.GetLiveDocs(reader);
+        string raw = UmbracoExamineFieldNames.RawFieldPrefix + field;
+        var stored = new HashSet<string>(StringComparer.Ordinal) { raw, field };
+        return
+        [
+            .. terms.Select(term =>
+            {
+                DocsEnum? docs = MultiFields.GetTermDocsEnum(
+                    reader,
+                    live,
+                    field,
+                    new BytesRef(term.Value)
+                );
+                int doc;
+                while (docs is not null && (doc = docs.NextDoc()) != DocIdSetIterator.NO_MORE_DOCS)
+                {
+                    if (documents is not null && !documents.Get(doc))
+                    {
+                        continue;
+                    }
+
+                    Lucene.Net.Documents.Document document = reader.Document(doc, stored);
+                    string? written = document
+                        .GetValues(raw, CultureInfo.InvariantCulture)
+                        .Concat(document.GetValues(field, CultureInfo.InvariantCulture))
+                        .FirstOrDefault(value =>
+                            string.Equals(value, term.Value, StringComparison.OrdinalIgnoreCase)
+                        );
+                    return written is not null && written != term.Value
+                        ? term with
+                        {
+                            Display = written,
+                        }
+                        : term;
+                }
+
+                return term;
+            }),
+        ];
     }
 
     private static List<TermCount> Order(List<TermCount> values, int take) =>

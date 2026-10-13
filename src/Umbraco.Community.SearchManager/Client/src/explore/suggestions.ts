@@ -27,7 +27,7 @@ export type Suggestion =
       kind: "value";
       /** The chip picking adds. */
       filter: Filter;
-      /** The value as shown. */
+      /** The value as shown: as written in the content when the server knows it, else the term. */
       label: string;
       /** The document count, or empty. */
       count: string;
@@ -146,7 +146,8 @@ export function valueOperator(type: FieldType, value: string): Filter["op"] {
 
 /**
  * Value suggestions for a field: its most common terms with counts, or relative dates for a
- * date field.
+ * date field. A term is shown as written (`display`) when the server returns that, but the chip
+ * picking it carries the indexed `value`, so it matches what is in the index.
  *
  * @param schema - The target's schema.
  * @param input - The input context (with a field).
@@ -164,16 +165,40 @@ export function valueSuggestions(
     field.type === "Date"
       ? DATE_SUGGESTIONS.filter((value) => value.startsWith(input.prefix.toLowerCase())).map((value) => ({
           value,
+          label: value,
           count: "",
         }))
-      : terms.map((term) => ({ value: term.value, count: term.count.toLocaleString("en-GB") }));
-  return values.slice(0, MAX_SUGGESTIONS).map(({ value, count }) => ({
+      : terms.map((term) => ({
+          value: term.value,
+          label: term.display || term.value,
+          count: term.count.toLocaleString("en-GB"),
+        }));
+  return values.slice(0, MAX_SUGGESTIONS).map(({ value, label, count }) => ({
     kind: "value",
-    label: value,
+    label,
     count,
     term: field.type === "Text",
     filter: { kind: "Field", field: field.name, op: valueOperator(field.type, value), value, exclude: input.exclude },
   }));
+}
+
+/**
+ * How a counted value reads in the fields panel: a date chip value as `dateLabel` reads it,
+ * anything else as written in the content (`display`) when the server returns that, otherwise
+ * the indexed term. Display only: filters built from it still carry `value`.
+ *
+ * @param type - The field type.
+ * @param value - The value and its count.
+ * @param term - Localises the date words.
+ * @returns The label.
+ */
+export function valueLabel(
+  type: FieldType,
+  value: TermCount,
+  term: (key: string, ...args: Array<string>) => string,
+): string {
+  if (type === "Date") return dateLabel(value.value, term);
+  return value.display || value.value;
 }
 
 /**

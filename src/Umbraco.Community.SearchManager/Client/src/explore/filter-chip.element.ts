@@ -18,9 +18,10 @@ const TAG_STYLE: Readonly<Record<ChipKind, { look: string; color: string }>> = {
  * One chip in the Explore search box: a pill `uui-tag` with the chip's sentence and a remove
  * button. Pressing the sentence opens `search-manager-chip-editor` in a popover.
  *
- * A chip the target cannot run ({@link disabledReason}) stays in place, drawn struck through at
+ * A chip that does not run ({@link disabledReason}) stays in place, drawn struck through at
  * reduced opacity, with the reason as its tooltip and accessible name; it can still be edited or
- * removed, and the view does not send it.
+ * removed. The view does not send chips the target cannot run; chips the server skipped are
+ * still sent, so the server's indexes keep pointing at the same chips.
  *
  * Not bound to a manifest; the search box renders one per chip and listens for its events.
  *

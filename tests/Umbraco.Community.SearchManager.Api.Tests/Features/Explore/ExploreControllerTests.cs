@@ -283,6 +283,94 @@ public class ExploreControllerTests
         Assert.Equal([chip], parsed.Filters);
     }
 
+    [Fact]
+    public async Task GetExploreSchema_SourceWithADefaultCulture_ReturnsIt()
+    {
+        // Arrange
+        _source.GetSchemaAsync(Content, Arg.Any<CancellationToken>()).Returns(FieldSchema.Empty);
+        _source.GetCulturesAsync(Arg.Any<CancellationToken>()).Returns(["da-DK", "en-US"]);
+        _source.GetDefaultCultureAsync(Arg.Any<CancellationToken>()).Returns("en-US");
+
+        // Act
+        IActionResult result = await With(new GetExploreSchemaController(_registry, _access))
+            .GetExploreSchema("ExternalIndex", TestContext.Current.CancellationToken);
+
+        // Assert
+        var schema = Assert.IsType<ExploreSchema>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("en-US", schema.DefaultCulture);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public async Task ExplainExplore_NoneOrMoreThanTwoIds_IsBadRequest(int ids)
+    {
+        // Act
+        IActionResult result = await ExplainAsync(
+            "ExternalIndex",
+            [.. Enumerable.Range(1, ids).Select(id => $"{id}")]
+        );
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Status(result));
+    }
+
+    [Fact]
+    public async Task ExplainExplore_MemberIndexWithoutMembersAccess_IsForbidden()
+    {
+        // Act
+        IActionResult result = await ExplainAsync("MembersIndex", ["1"]);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status403Forbidden, Status(result));
+    }
+
+    [Fact]
+    public async Task ExplainExplore_SourceCannotExplain_IsBadRequest()
+    {
+        // Arrange
+        _source
+            .ExplainAsync(
+                Arg.Any<ExploreTarget>(),
+                Arg.Any<ExplainRequest>(),
+                Arg.Any<CancellationToken>()
+            )
+            .Throws(new NotSupportedException("no scores"));
+
+        // Act
+        IActionResult result = await ExplainAsync("ExternalIndex", ["1"]);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, Status(result));
+    }
+
+    [Fact]
+    public async Task ExplainExplore_TwoIds_ReturnsTheSourcesExplanations()
+    {
+        // Arrange
+        var explained = new ExplainResult([
+            new DocumentExplanation("1", true, true, 1, null, []),
+            new DocumentExplanation("2", true, true, 0.5f, null, []),
+        ]);
+        _source
+            .ExplainAsync(Content, Arg.Any<ExplainRequest>(), Arg.Any<CancellationToken>())
+            .Returns(explained);
+
+        // Act
+        IActionResult result = await ExplainAsync("ExternalIndex", ["1", "2"]);
+
+        // Assert
+        Assert.Same(explained, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    private Task<IActionResult> ExplainAsync(string target, string[] ids) =>
+        With(new ExplainExploreController(_registry, _access))
+            .ExplainExplore(
+                target,
+                new ExplainRequest([], null, null, ids),
+                TestContext.Current.CancellationToken
+            );
+
     private Task<IActionResult> SearchAsync(string target, ExploreQuery query) =>
         With(new SearchExploreController(_registry, _access))
             .SearchExplore(target, query, TestContext.Current.CancellationToken);

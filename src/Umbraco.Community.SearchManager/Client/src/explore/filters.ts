@@ -6,6 +6,7 @@ import type {
   FilterKind,
   FilterOperator,
   IndexField,
+  SkippedFilter,
   UnsupportedFilter,
 } from "../api/index.js";
 
@@ -224,4 +225,42 @@ export function disabledReason(
     return term("searchManager_chipWrongOperator", term(`searchManager_op${filter.op}`), field.type.toLowerCase());
   }
   return undefined;
+}
+
+/** What the server said about the chips of one search: the list it was sent, and which it skipped. */
+export interface ServerSkips {
+  /** The filters the search sent (the chips that were not disabled), in order. */
+  filters: ReadonlyArray<Filter>;
+  /** The chips the server skipped, by index into {@link filters}, with why. */
+  skipped: ReadonlyArray<SkippedFilter>;
+}
+
+/**
+ * Why each chip does not run, by chip index: the client's own reason ({@link disabledReason}),
+ * or the reason the server gave for skipping it. Disabled chips are not sent, so the server's
+ * indexes (into the sent list) are mapped back past them. The server's answer only counts when
+ * it was for the chips that would be sent now; a stale answer (the chips changed since) is
+ * ignored rather than pinned on the wrong chip.
+ *
+ * @param filters - The chips, disabled ones included.
+ * @param schema - The target's schema.
+ * @param target - The target.
+ * @param server - The last search's sent filters and skipped list, if a result has arrived.
+ * @param term - Localises the client's reasons.
+ * @returns One entry per chip: the reason, or `undefined` when it runs.
+ */
+export function chipReasons(
+  filters: ReadonlyArray<Filter>,
+  schema: ExploreSchema | undefined,
+  target: ExploreTarget | undefined,
+  server: ServerSkips | undefined,
+  term: Term,
+): Array<string | undefined> {
+  const client = filters.map((filter) => disabledReason(filter, schema, target, term));
+  const sent = filters.filter((_, index) => !client[index]);
+  const current = server !== undefined && JSON.stringify(server.filters) === JSON.stringify(sent);
+  const fromServer = new Map(current ? server.skipped.map((skip) => [skip.index, skip.reason]) : []);
+  // Only chips that were sent advance the index into the sent list.
+  let sentIndex = 0;
+  return client.map((reason) => reason ?? fromServer.get(sentIndex++));
 }

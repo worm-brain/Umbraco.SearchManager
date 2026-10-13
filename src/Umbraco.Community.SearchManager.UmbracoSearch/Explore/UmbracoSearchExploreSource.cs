@@ -120,8 +120,13 @@ internal sealed class UmbracoSearchExploreSource : IExploreSource
                     ExploreTargetKind.Index,
                     UmbracoSearchIndexSource.Describe(registration),
                     registration.ContainedObjectTypes.Contains(UmbracoObjectTypes.Member),
-                    // Umbraco Search takes filters, not raw queries; no term statistics in v1.
-                    new ExploreCapabilities(NativeQuery: false, TermStatistics: false)
+                    // Umbraco Search takes filters, not raw queries; no term statistics in v1,
+                    // and no scores to explain.
+                    new ExploreCapabilities(
+                        NativeQuery: false,
+                        TermStatistics: false,
+                        ExplainScore: false
+                    )
                 )),
         ];
         return Task.FromResult(targets);
@@ -139,6 +144,22 @@ internal sealed class UmbracoSearchExploreSource : IExploreSource
         IEnumerable<ILanguage> languages = await _languageService.GetAllAsync();
         return [.. languages.Select(language => language.IsoCode).Order(StringComparer.Ordinal)];
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The site's default language: Umbraco Search keeps one document per culture and finds only
+    /// invariant documents without one, so starting on no culture hides variant content (ADR 0021).
+    /// </remarks>
+    public async Task<string?> GetDefaultCultureAsync(CancellationToken cancellationToken) =>
+        await _languageService.GetDefaultIsoCodeAsync();
+
+    /// <inheritdoc />
+    /// <exception cref="NotSupportedException">Always: Umbraco Search returns no scores to explain.</exception>
+    public Task<ExplainResult> ExplainAsync(
+        ExploreTarget target,
+        ExplainRequest request,
+        CancellationToken cancellationToken
+    ) => throw new NotSupportedException("Umbraco Search does not return scores to explain");
 
     /// <inheritdoc />
     /// <remarks>

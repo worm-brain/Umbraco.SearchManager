@@ -2,7 +2,6 @@ import { css, customElement, html, nothing, property } from "@umbraco-cms/backof
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import type { RebuildRun } from "../api/types.gen.js";
-import { formatCount } from "../indexes/index-format.js";
 import { estimatePercent, finishedEmpty, formatDuration, waitPosition } from "./rebuild-model.js";
 
 /** How each run status is drawn: an icon and a colour token, always beside text. */
@@ -118,11 +117,11 @@ export class SearchManagerRebuildsPanelElement extends UmbLitElement {
           return this.localize.term("searchManager_rebuildsStarting");
         if (run.zeroDowntime) return this.localize.term("searchManager_rebuildsRunningZeroDowntime", percent);
         return percent === null
-          ? this.localize.term("searchManager_rebuildsRunningNoEstimate", formatCount(run.documentsWritten))
+          ? this.localize.term("searchManager_rebuildsRunningNoEstimate", run.documentsWritten ?? null)
           : this.localize.term(
               "searchManager_rebuildsRunning",
-              formatCount(run.documentsWritten),
-              formatCount(run.estimatedTotal),
+              run.documentsWritten ?? null,
+              run.estimatedTotal ?? null,
               percent,
             );
       case "Succeeded":
@@ -135,7 +134,7 @@ export class SearchManagerRebuildsPanelElement extends UmbLitElement {
         return this.localize.term(
           "searchManager_rebuildsSucceeded",
           formatDuration(run.startedAt ?? run.queuedAt, run.endedAt),
-          formatCount(run.documentsAfter),
+          run.documentsAfter ?? null,
         );
       case "Failed":
         return this.localize.term(

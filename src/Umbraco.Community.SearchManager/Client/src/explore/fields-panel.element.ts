@@ -22,7 +22,7 @@ import { describeError } from "../shared/describe-error.js";
 import { newFieldDraft } from "./chip-edit.js";
 import { SearchManagerAddFilterEvent, type SearchManagerChipChangeEvent } from "./explore-events.js";
 import { fieldLabel, resolveField, sameFilter } from "./filters.js";
-import { coverage, dateLabel, valueOperator } from "./suggestions.js";
+import { coverage, valueLabel, valueOperator } from "./suggestions.js";
 import "./chip-editor.element.js";
 
 /** The aliases whose fields are pinned at the top of the panel, in order. */
@@ -139,8 +139,8 @@ export class SearchManagerFieldsPanelElement extends UmbLitElement {
               ? html`<small
                   >${
                     this._facets.wholeIndex
-                      ? this.localize.term("searchManager_fieldsWholeIndex", this._facets.total.toLocaleString("en-GB"))
-                      : this.localize.term("searchManager_fieldsResults", this._facets.total.toLocaleString("en-GB"))
+                      ? this.localize.term("searchManager_fieldsWholeIndex", this._facets.total)
+                      : this.localize.term("searchManager_fieldsResults", this._facets.total)
                   }</small
                 >`
               : nothing
@@ -164,7 +164,8 @@ export class SearchManagerFieldsPanelElement extends UmbLitElement {
         </div>
         ${facet.values.length === 0 ? html`<small class="muted">${this.localize.term("searchManager_fieldsNoValues")}</small>` : nothing}
         ${facet.values.map((value) => {
-          const shown = facet.type === "Date" ? dateLabel(value.value, term) : value.value;
+          // Shown as written; the filter still carries the indexed value.
+          const shown = valueLabel(facet.type, value, term);
           const include = this.#valueFilter(facet, value.value, false);
           const on = this.allFilters.some((filter) => sameFilter(filter, include));
           return html`
