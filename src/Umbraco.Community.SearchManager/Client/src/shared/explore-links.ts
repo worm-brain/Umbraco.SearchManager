@@ -51,3 +51,15 @@ export function fieldStatisticsUrl(index: string): string {
 export function findNodeUrl(key: string): string {
   return searchManagerViewPath("diagnose", undefined, { tool: "node", node: key });
 }
+
+/**
+ * The backoffice path of the Diagnose view's Analyzer tool, its left column on one field of an
+ * index. No `index` parameter is written: the Analyzer has its own two pickers.
+ *
+ * @param index - The index for the left column.
+ * @param field - The field to analyse.
+ * @returns The path, for example `section/settings/workspace/search-manager/view/diagnose?tool=analyzer&left=ExternalIndex&leftField=nodeName`.
+ */
+export function analyzerUrl(index: string, field: string): string {
+  return searchManagerViewPath("diagnose", undefined, { tool: "analyzer", left: index, leftField: field });
+}

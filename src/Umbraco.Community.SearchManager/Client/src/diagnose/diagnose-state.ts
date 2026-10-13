@@ -1,7 +1,7 @@
 /** The tools of the Diagnose view, as the `tool` query-string key names them. */
-export const DIAGNOSE_TOOLS = ["fields", "node"] as const;
+export const DIAGNOSE_TOOLS = ["fields", "analyzer", "node"] as const;
 
-/** One Diagnose tool: field statistics, or find a node. */
+/** One Diagnose tool: field statistics, the analyzer, or find a node. */
 export type DiagnoseTool = (typeof DIAGNOSE_TOOLS)[number];
 
 /** The tool a view opens on when the URL names none (or one it does not know). */
@@ -30,10 +30,36 @@ export interface DiagnoseViewState {
   culture?: string;
   /** Find a node: the query to check the node against. */
   q?: string;
+  /** Analyzer: the text to index. */
+  text?: string;
+  /** Analyzer: what a visitor searches for. */
+  term?: string;
+  /** Analyzer: the left column's index; `undefined` picks ExternalIndex. */
+  left?: string;
+  /** Analyzer: the left column's field; `undefined` picks the index's default field. */
+  leftField?: string;
+  /** Analyzer: the right column's index; `undefined` picks InternalIndex. */
+  right?: string;
+  /** Analyzer: the right column's field; `undefined` picks the index's default field. */
+  rightField?: string;
 }
 
 /** The query-string keys the view owns; other keys in the URL are kept as they are. */
-export const DIAGNOSE_STATE_KEYS = ["tool", "index", "variants", "filter", "node", "culture", "q"] as const;
+export const DIAGNOSE_STATE_KEYS = [
+  "tool",
+  "index",
+  "variants",
+  "filter",
+  "node",
+  "culture",
+  "q",
+  "text",
+  "term",
+  "left",
+  "leftField",
+  "right",
+  "rightField",
+] as const;
 
 /**
  * An empty view: the default tool and index, Field-group rows only.
@@ -60,6 +86,12 @@ export function encodeDiagnoseState(state: DiagnoseViewState): URLSearchParams {
   if (state.node) params.set("node", state.node);
   if (state.culture) params.set("culture", state.culture);
   if (state.q) params.set("q", state.q);
+  if (state.text) params.set("text", state.text);
+  if (state.term) params.set("term", state.term);
+  if (state.left) params.set("left", state.left);
+  if (state.leftField) params.set("leftField", state.leftField);
+  if (state.right) params.set("right", state.right);
+  if (state.rightField) params.set("rightField", state.rightField);
   return params;
 }
 
@@ -82,6 +114,12 @@ export function decodeDiagnoseState(params: URLSearchParams): DiagnoseViewState 
     node: params.get("node") || undefined,
     culture: params.get("culture") || undefined,
     q: params.get("q") || undefined,
+    text: params.get("text") || undefined,
+    term: params.get("term") || undefined,
+    left: params.get("left") || undefined,
+    leftField: params.get("leftField") || undefined,
+    right: params.get("right") || undefined,
+    rightField: params.get("rightField") || undefined,
   };
 }
 

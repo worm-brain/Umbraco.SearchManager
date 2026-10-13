@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Diagnose > Analyzer: type a text and a search and see, side by side for two indexes, how each
+  index's analyzer turns the text into terms step by step (removed, changed and added terms
+  marked) and whether the search finds it. The verdict runs the query the engine itself builds
+  for the search, so rules such as core Examine looking for searches under 4 characters exactly
+  as typed are applied. Umbraco Search indexes on the Examine provider are covered by the
+  adapter, with the field a free-text search reads offered first.
 - The rebuild history records core Examine rebuilds started outside Search Manager: Umbraco's
   rebuild of empty indexes after the site starts as **At startup**, and rebuilds from the core
   Examine dashboard, a language change or another package as **Started outside Search Manager**,

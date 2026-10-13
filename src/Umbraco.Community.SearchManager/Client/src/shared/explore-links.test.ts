@@ -11,7 +11,7 @@ vi.mock("@umbraco-cms/backoffice/workspace", () => ({
   },
 }));
 
-const { exploreUrl, fieldStatisticsUrl, findNodeUrl } = await import("./explore-links.js");
+const { analyzerUrl, exploreUrl, fieldStatisticsUrl, findNodeUrl } = await import("./explore-links.js");
 
 /** Reads an Explore link back the way the Explore view does. */
 function readBack(url: string) {
@@ -51,5 +51,17 @@ describe("findNodeUrl", () => {
     expect(findNodeUrl("8e1f2a3b-4c5d-4e6f-9a0b-1c2d3e4f5a6b")).toBe(
       "section/settings/workspace/search-manager/view/diagnose?tool=node&node=8e1f2a3b-4c5d-4e6f-9a0b-1c2d3e4f5a6b",
     );
+  });
+});
+
+describe("analyzerUrl", () => {
+  it("opens the Analyzer with the index and field in the left column", () => {
+    expect(analyzerUrl("ExternalIndex", "nodeName")).toBe(
+      "section/settings/workspace/search-manager/view/diagnose?tool=analyzer&left=ExternalIndex&leftField=nodeName",
+    );
+  });
+
+  it("escapes a culture-variant field name", () => {
+    expect(analyzerUrl("Umb_Content", "title_en-US & co")).toContain("leftField=title_en-US+%26+co");
   });
 });

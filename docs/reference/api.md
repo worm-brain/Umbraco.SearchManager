@@ -66,6 +66,8 @@ section access, as in Explore.
 | Method and path | What it does |
 | --- | --- |
 | `GET /diagnose/{target}/fields` | Every field's type, analyzer, coverage, distinct terms and top terms (dates: the range). An index without statistics answers with `available: false` and the reason. |
+| `GET /diagnose/{target}/analyzer/fields` | The text and keyword fields whose analyzer can be run, with each field's analyzer and the field to pick first. An index that cannot be analyzed answers with `available: false` and the reason. |
+| `POST /diagnose/{target}/analyzer` | Runs text through a field's analyzer and returns every stage's tokens (kept, changed, removed, added) and, for a search term, whether the engine's own query finds the text and what it looks for. Body: `{ "field": "nodeName", "text": "...", "searchTerm": "cafe" }`; text up to 2,000 characters, search up to 200. |
 | `GET /diagnose/nodes?query=&take=10` | Documents by name, id or key, for "Find a node". |
 | `GET /diagnose/nodes/{key}` | A document's facts and, for every index you can see, whether it holds the document, why not, and whether its copy is stale. |
 | `POST /diagnose/{target}/nodes/{key}/match` | Tests filters against a document: whether the whole query finds it and, per filter, whether it matches and the document's values. Body: `{ "filters": [...], "culture": "en-US" }`. |

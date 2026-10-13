@@ -1,8 +1,10 @@
 import { expect, test } from "../support/test.js";
 import {
+  analyzerColumn,
   findNode,
   openExplore,
   openFieldStatistics,
+  openAnalyzer,
   openIndexes,
   searchBox,
   selectBox,
@@ -130,6 +132,13 @@ test("diagnose field statistics", async ({ page }) => {
   await waitForSeededIndex(page);
   await openFieldStatistics(page);
   await shoot(page, "diagnose-fields");
+});
+
+test("diagnose analyzer", async ({ page }) => {
+  await openAnalyzer(page, { text: "Café menu 2026: the opening hours", term: "cafe" });
+  await expect(analyzerColumn(page, "ExternalIndex").getByRole("status")).toHaveAttribute("data-verdict", "no-match");
+  await expect(analyzerColumn(page, "InternalIndex").getByRole("status")).toHaveAttribute("data-verdict", "match");
+  await shoot(page, "diagnose-analyzer");
 });
 
 test("find a node", async ({ page }) => {

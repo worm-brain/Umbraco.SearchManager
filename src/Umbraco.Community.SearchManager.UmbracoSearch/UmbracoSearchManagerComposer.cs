@@ -38,9 +38,10 @@ public sealed class UmbracoSearchManagerComposer : IComposer
             services.GetRequiredService<UmbracoSearchExploreSource>()
         );
 
-        // Diagnose: field statistics and "Find a node" (ADR 0018, 0019).
+        // Diagnose: field statistics, "Find a node" and the analyzer (ADR 0018, 0019, 0023).
         builder.Services.AddSingleton<IFieldStatisticsSource, UmbracoSearchFieldStatisticsSource>();
         builder.Services.AddSingleton<INodePresenceSource, UmbracoSearchNodePresenceSource>();
+        builder.Services.AddSingleton<IAnalyzerSource, UmbracoSearchAnalyzerSource>();
 
         // The Search Manager box on Umbraco Search's index page.
         builder.Services.AddSingleton<IPackageManifestReader, SearchIndexBoxManifestReader>();

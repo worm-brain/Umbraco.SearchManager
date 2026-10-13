@@ -33,6 +33,8 @@ tutorial.
   the analyzer of every field, with links into Explore.
 - [Find where a page is indexed](how-to/find-where-a-page-is-indexed.md): which indexes hold a
   page and why the others do not, and which part of a search misses it.
+- [See how an index analyzes text](how-to/see-how-an-index-analyzes-text.md): an index's
+  analyzer step by step, side by side with another, and whether a search finds the text.
 - [Use it with Umbraco Search](how-to/use-with-umbraco-search.md): the adapter package, what it
   adds and what Explore can send.
 - [Keep the core Examine dashboard](how-to/keep-the-core-examine-dashboard.md): show both tools
