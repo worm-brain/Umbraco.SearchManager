@@ -12,6 +12,8 @@ describe("explore view state in the URL", () => {
       page: 3,
       native: "+level:[3 TO 3]",
       showQuery: true,
+      explain: true,
+      compare: ["1234", "1250"] as [string, string],
     };
     expect(decodeExploreState(encodeExploreState(state))).toEqual(state);
   });
@@ -43,6 +45,19 @@ describe("explore view state in the URL", () => {
 
   it("ignores a page that is not a positive whole number", () => {
     expect(decodeExploreState(new URLSearchParams("page=-4")).page).toBe(1);
+  });
+
+  it("keeps the explanation and the comparison open through the URL", () => {
+    const encoded = encodeExploreState({ ...createExploreState(), explain: true, compare: ["10", "20"] });
+    expect(encoded.toString()).toBe("ex=1&cmp=10%2C20");
+    expect(decodeExploreState(encoded)).toMatchObject({ explain: true, compare: ["10", "20"] });
+  });
+
+  it("ignores a comparison that is not two different ids", () => {
+    const decoded = ["cmp=10", "cmp=10,20,30", "cmp=10,10", "cmp=,20"].map(
+      (search) => decodeExploreState(new URLSearchParams(search)).compare,
+    );
+    expect(decoded).toEqual([undefined, undefined, undefined, undefined]);
   });
 
   it("keeps other query-string keys when merging", () => {

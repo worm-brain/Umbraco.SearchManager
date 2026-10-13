@@ -100,7 +100,7 @@ describe("disabledReason", () => {
 
   it("disables raw Lucene on an index without a Lucene searcher", () => {
     const lucene: Filter = { kind: "Lucene", field: null, op: "Contains", value: "a:b", exclude: false };
-    const other = { ...target, capabilities: { nativeQuery: false, termStatistics: false } };
+    const other = { ...target, capabilities: { nativeQuery: false, termStatistics: false, explainScore: false } };
     expect(disabledReason(lucene, schema, other, term)).toBe("ExternalIndex does not take raw Lucene queries");
   });
 

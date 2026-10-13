@@ -38,3 +38,38 @@ test("reports a Lucene syntax error in native mode", async ({ page }) => {
 
   await expect(page.locator("search-manager-native-box").getByText("Cannot parse this query")).toBeVisible();
 });
+
+test("explains the top result of a word search", async ({ page }) => {
+  await searchBox(page).fill("umbraco");
+  await searchBox(page).press("Enter");
+  await expect(page.locator("search-manager-filter-chip")).toHaveCount(1);
+
+  await page.locator("search-manager-results button.open").first().click();
+  const drawer = page.locator("search-manager-document-drawer");
+  await drawer.getByRole("button", { name: "Explain score" }).click();
+
+  const tree = page.getByRole("list", { name: /^How the score of .+ is made up$/ });
+  await expect(tree.getByText(/contains "umbraco"/).first()).toBeVisible();
+  await expect(tree.getByText(/idf \d/).first()).toBeVisible();
+});
+
+test("compares two results field by field with differences only", async ({ page }) => {
+  await searchBox(page).fill("guide umbraco");
+  await searchBox(page).press("Enter");
+  await expect(page.locator("search-manager-filter-chip")).toHaveCount(1);
+
+  const boxes = page.locator('search-manager-results uui-checkbox[aria-label^="Compare the score of "]');
+  await boxes.nth(0).click();
+  await boxes.nth(1).click();
+  // Two are the most a comparison takes.
+  await expect(boxes.nth(2)).toHaveAttribute("disabled");
+  await page.getByRole("button", { name: "Compare scores" }).click();
+
+  const table = page.locator('search-manager-score-compare uui-table[aria-label="Score comparison"]');
+  const rows = table.locator("uui-table-row");
+  await expect(rows.first()).toBeVisible();
+  const all = await rows.count();
+  await page.locator('search-manager-score-compare uui-toggle[label="Differences only"]').click();
+  // The query normalisation is the same for both documents, so at least that row goes.
+  await expect.poll(() => rows.count()).toBeLessThan(all);
+});

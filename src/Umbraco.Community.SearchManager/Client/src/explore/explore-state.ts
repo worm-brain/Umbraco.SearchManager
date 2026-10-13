@@ -27,10 +27,25 @@ export interface ExploreViewState {
   native?: string;
   /** Whether the show-query panel is open. */
   showQuery?: boolean;
+  /** Whether the drawer shows the open document's score explanation. Cleared with `doc`. */
+  explain?: boolean;
+  /** The ids of the two results whose scores are compared in the drawer area. Cleared with `doc`. */
+  compare?: [string, string];
 }
 
 /** The query-string keys the view owns; other keys in the URL are kept as they are. */
-export const EXPLORE_STATE_KEYS = ["index", "culture", "f", "cols", "doc", "page", "native", "sq"] as const;
+export const EXPLORE_STATE_KEYS = [
+  "index",
+  "culture",
+  "f",
+  "cols",
+  "doc",
+  "page",
+  "native",
+  "sq",
+  "ex",
+  "cmp",
+] as const;
 
 /**
  * An empty view: first target, all cultures, no chips.
@@ -44,7 +59,8 @@ export function createExploreState(): ExploreViewState {
 /**
  * Writes the state as query-string parameters, leaving out defaults. Chips are base64url JSON
  * (`f`), columns a comma list (`cols`); `native` is written even when empty, because an empty
- * native query is still native mode; `sq=1` keeps the show-query panel open.
+ * native query is still native mode; `sq=1` keeps the show-query panel open; `ex=1` keeps the
+ * score explanation open; `cmp=id1,id2` keeps the score comparison open.
  *
  * @param state - The state.
  * @returns The parameters, in a stable order.
@@ -59,6 +75,8 @@ export function encodeExploreState(state: ExploreViewState): URLSearchParams {
   if (state.page > 1) params.set("page", String(state.page));
   if (state.native !== undefined) params.set("native", state.native);
   if (state.showQuery) params.set("sq", "1");
+  if (state.explain) params.set("ex", "1");
+  if (state.compare) params.set("cmp", state.compare.join(","));
   return params;
 }
 
@@ -83,7 +101,23 @@ export function decodeExploreState(params: URLSearchParams): ExploreViewState {
     page: Number.isInteger(page) && page > 1 ? page : 1,
     native: params.get("native") ?? undefined,
     showQuery: params.get("sq") === "1" ? true : undefined,
+    explain: params.get("ex") === "1" ? true : undefined,
+    compare: decodeCompare(params.get("cmp")),
   };
+}
+
+/**
+ * Reads `cmp`: exactly two different ids, or nothing.
+ *
+ * @param value - The parameter.
+ * @returns The pair, or `undefined` when it is missing or not two different ids.
+ */
+function decodeCompare(value: string | null): [string, string] | undefined {
+  const ids = (value ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+  return ids.length === 2 && ids[0] !== ids[1] ? [ids[0]!, ids[1]!] : undefined;
 }
 
 /**

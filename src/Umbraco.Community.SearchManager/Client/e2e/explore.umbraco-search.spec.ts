@@ -35,3 +35,14 @@ test("adds a Search Manager box to Umbraco Search's index page", async ({ page }
 
   await expect(page).toHaveURL(/search-manager\/view\/explore\?index=Umb_PublishedContent/);
 });
+
+test("Explain score is unavailable with the reason", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+  await page.locator("uui-select#culture select").selectOption("en-US");
+  await waitForSeededIndex(page, 10);
+
+  await page.locator("search-manager-results button.open").first().click();
+
+  const drawer = page.locator("search-manager-document-drawer");
+  await expect(drawer.getByText("Umbraco Search does not return scores").first()).toBeVisible();
+});
