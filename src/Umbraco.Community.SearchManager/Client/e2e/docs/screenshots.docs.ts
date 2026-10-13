@@ -1,5 +1,13 @@
 import { expect, test } from "../support/test.js";
-import { openExplore, openIndexes, searchBox, selectBox, waitForSeededIndex } from "../support/search-manager.js";
+import {
+  findNode,
+  openExplore,
+  openFieldStatistics,
+  openIndexes,
+  searchBox,
+  selectBox,
+  waitForSeededIndex,
+} from "../support/search-manager.js";
 import { repoRoot } from "../support/sites.js";
 import type { Page } from "@playwright/test";
 
@@ -115,6 +123,45 @@ test("native mode", async ({ page }) => {
   await page.locator("search-manager-native-box uui-input input").fill("+__NodeTypeAlias:blogpost and level:2");
   await expect(page.getByText(/^Fix:/).first()).toBeVisible();
   await shoot(page, "native-mode");
+});
+
+test("diagnose field statistics", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  await openFieldStatistics(page);
+  await shoot(page, "diagnose-fields");
+});
+
+test("find a node", async ({ page }) => {
+  await openExplore(page);
+  await waitForSeededIndex(page);
+  // Umbraco Search indexes the seeded content after start-up; wait so its rows show Present.
+  await openExplore(page, "Umb_Content");
+  await page.locator("uui-select#culture select").selectOption("en-US");
+  await waitForSeededIndex(page, 10);
+  await findNode(page, "Guide to Umbraco 1");
+  const match = page.locator("search-manager-node-match");
+  await match.locator("uui-select#match-index select").selectOption("ExternalIndex");
+  await match.locator("uui-input.query input").fill("umbraco type:blogPost");
+  await match.locator("uui-input.query input").press("Enter");
+  await expect(match.locator(".verdict")).toBeVisible();
+  await shoot(page, "find-a-node");
+});
+
+test("show in search indexes", async ({ page }) => {
+  await openExplore(page, "Umb_Content");
+  await page.locator("uui-select#culture select").selectOption("en-US");
+  await waitForSeededIndex(page, 10);
+  await page.goto("/umbraco/section/content");
+  const home = page.locator('uui-menu-item[label="Home"]').first();
+  await expect(home).toBeVisible({ timeout: 30_000 });
+  await home.hover();
+  await page.getByRole("button", { name: "View actions for 'Home'" }).first().click();
+  await page.locator('uui-menu-item[label="Show in search indexes"]').first().click();
+  await expect(page.locator("search-manager-node-presence-modal search-manager-node-presence uui-table")).toBeVisible({
+    timeout: 30_000,
+  });
+  await shoot(page, "show-in-search-indexes");
 });
 
 test("explore an Umbraco Search index", async ({ page }) => {

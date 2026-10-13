@@ -13,11 +13,16 @@ member details. This page explains who can see it and what it can do.
 
 These are the same rules the core Examine Management dashboard follows.
 
+The content tree's **Show in search indexes** action is only shown to users with Settings section
+access, and the sidebar it opens leaves member indexes out on the same terms.
+
 ## What it can see
 
 Explore shows the stored fields of any document in an index you can open. `InternalIndex` holds
 unpublished content too, so anyone with Settings access can read unpublished content through it,
 as they can with the core dashboard. Give Settings access only to people who should see that.
+**Find a node** looks documents up by name across the whole content tree, including the recycle
+bin, for the same users.
 
 ## What it can change
 

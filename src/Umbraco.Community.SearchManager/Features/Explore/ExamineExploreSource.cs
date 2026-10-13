@@ -33,6 +33,8 @@ internal sealed class ExamineExploreSource(
     TimeProvider timeProvider
 ) : IExploreSource
 {
+    private readonly ExamineTargets _targets = new(examineManager);
+
     /// <summary>The field results are sorted by, newest first, when no clause ranks them.</summary>
     private const string UpdateDateField = "updateDate";
 
@@ -110,8 +112,8 @@ internal sealed class ExamineExploreSource(
         CancellationToken cancellationToken
     )
     {
-        ISearcher searcher = SearcherOf(target);
-        return Task.FromResult(ExamineFields.Read(searcher, IndexesBehind(searcher)));
+        ISearcher searcher = _targets.SearcherOf(target);
+        return Task.FromResult(ExamineFields.Read(searcher, _targets.IndexesBehind(searcher)));
     }
 
     /// <inheritdoc />
@@ -131,8 +133,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(query);
 
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
 
         LuceneCompilation compilation = Compile(
             query.Filters,
@@ -194,8 +196,8 @@ internal sealed class ExamineExploreSource(
             );
         }
 
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         IReadOnlyList<Core.Explore.Filter> filters = request.Filters ?? [];
         LuceneCompilation compilation = Compile(
             filters,
@@ -275,8 +277,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         RequireTermStatistics(target);
 
-        ISearcher searcher = SearcherOf(target);
-        LuceneIndex[] indexes = IndexesBehind(searcher);
+        ISearcher searcher = _targets.SearcherOf(target);
+        LuceneIndex[] indexes = _targets.IndexesBehind(searcher);
         IndexField? resolved = ExamineFields.Read(searcher, indexes).Resolve(field);
         if (resolved is null)
         {
@@ -309,8 +311,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(query);
         RequireTermStatistics(target);
 
-        ISearcher searcher = SearcherOf(target);
-        LuceneIndex[] indexes = IndexesBehind(searcher);
+        ISearcher searcher = _targets.SearcherOf(target);
+        LuceneIndex[] indexes = _targets.IndexesBehind(searcher);
         FieldSchema schema = ExamineFields.Read(searcher, indexes);
         LuceneCompilation compilation = Compile(query.Filters, query.Culture, schema, target);
 
@@ -405,8 +407,8 @@ internal sealed class ExamineExploreSource(
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(request);
 
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         if (request.Native is not null)
         {
             string native = RequireNative(target, request.Native);
@@ -453,8 +455,8 @@ internal sealed class ExamineExploreSource(
     {
         ArgumentNullException.ThrowIfNull(target);
         string native = RequireNative(target, query);
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         IReadOnlyList<NativeWarning> warnings = NativeQueryLinter.Lint(native, schema);
 
         try
@@ -484,8 +486,8 @@ internal sealed class ExamineExploreSource(
     {
         ArgumentNullException.ThrowIfNull(target);
         string native = RequireNative(target, query);
-        ISearcher searcher = SearcherOf(target);
-        FieldSchema schema = ExamineFields.Read(searcher, IndexesBehind(searcher));
+        ISearcher searcher = _targets.SearcherOf(target);
+        FieldSchema schema = ExamineFields.Read(searcher, _targets.IndexesBehind(searcher));
         return Task.FromResult(LuceneToChips.Read(native, schema));
     }
 
@@ -616,62 +618,6 @@ internal sealed class ExamineExploreSource(
         }
     }
 
-    /// <summary>The searcher behind a target.</summary>
-    /// <param name="target">A target this source listed.</param>
-    /// <returns>The index's own searcher, or the registered searcher.</returns>
-    /// <exception cref="InvalidOperationException">The index or searcher has gone.</exception>
-    private ISearcher SearcherOf(ExploreTarget target)
-    {
-        if (
-            target.Kind == ExploreTargetKind.Index
-            && examineManager.TryGetIndex(target.Name, out IIndex? index)
-        )
-        {
-            return index.Searcher;
-        }
-
-        if (examineManager.TryGetSearcher(target.Name, out ISearcher? searcher))
-        {
-            return searcher;
-        }
-
-        throw new InvalidOperationException($"Examine has no index or searcher {target.Name}");
-    }
-
-    /// <summary>The Lucene indexes a searcher reads: its own index, or a multi-index searcher's.</summary>
-    /// <param name="searcher">The searcher.</param>
-    /// <returns>The indexes, in <see cref="IExamineManager"/> order.</returns>
-    private LuceneIndex[] IndexesBehind(ISearcher searcher)
-    {
-        ISearcher[] searchers = searcher is MultiIndexSearcher multi
-            ? SearchersOf(multi)
-            : [searcher];
-        return
-        [
-            .. examineManager
-                .Indexes.OfType<LuceneIndex>()
-                .Where(index =>
-                    searchers.Any(candidate => ReferenceEquals(candidate, index.Searcher))
-                ),
-        ];
-    }
-
-    /// <summary>The searchers a multi-index searcher combines.</summary>
-    /// <param name="multi">The multi-index searcher.</param>
-    /// <returns>Its searchers.</returns>
-    /// <remarks>
-    /// Read by name: the property's type differs between Examine 3 and Examine 4 (which Umbraco
-    /// Search brings), so a compiled call binds to one signature and throws
-    /// <see cref="MissingMethodException"/> under the other.
-    /// </remarks>
-    internal static ISearcher[] SearchersOf(MultiIndexSearcher multi) =>
-        typeof(MultiIndexSearcher)
-            .GetProperty(nameof(MultiIndexSearcher.Searchers))
-            ?.GetValue(multi)
-            is System.Collections.IEnumerable searchers
-            ? [.. searchers.OfType<ISearcher>()]
-            : [];
-
     private static ExploreCapabilities CapabilitiesOf(ISearcher searcher)
     {
         bool lucene = searcher is BaseLuceneSearcher;
@@ -704,6 +650,9 @@ internal sealed class ExamineExploreSource(
             );
 
         return IsMember(searcher)
-            || (searcher is MultiIndexSearcher multi && SearchersOf(multi).Any(IsMember));
+            || (
+                searcher is MultiIndexSearcher multi
+                && ExamineTargets.SearchersOf(multi).Any(IsMember)
+            );
     }
 }

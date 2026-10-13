@@ -292,6 +292,25 @@ internal sealed class UmbracoSearchExploreSource : IExploreSource
         CancellationToken cancellationToken
     ) => throw NoNativeQueries(target);
 
+    /// <summary>Compiles chips for a target as a search would (used by "Find a node", ADR 0019).</summary>
+    /// <param name="target">A target this source listed.</param>
+    /// <param name="filters">The chips.</param>
+    /// <returns>The compiled request.</returns>
+    internal UmbracoSearchCompilation CompileFor(
+        ExploreTarget target,
+        IReadOnlyList<SearchManagerFilter> filters
+    ) => Compile(filters, FieldsOf(target));
+
+    /// <summary>Umbraco Search's searcher for an alias.</summary>
+    /// <param name="alias">The index alias.</param>
+    /// <returns>The searcher, or null when Umbraco Search has none.</returns>
+    internal UmbracoSearcher? SearcherFor(string alias) => _searcherResolver?.GetSearcher(alias);
+
+    /// <summary>The Examine provider's physical index serving an alias, or null for other providers.</summary>
+    /// <param name="alias">The index alias.</param>
+    /// <returns>The index, or null.</returns>
+    internal IIndex? PhysicalIndexFor(string alias) => PhysicalIndex(alias);
+
     /// <summary>Compiles chips, resolving relative dates against the server's clock.</summary>
     private UmbracoSearchCompilation Compile(
         IReadOnlyList<SearchManagerFilter> filters,
@@ -339,27 +358,13 @@ internal sealed class UmbracoSearchExploreSource : IExploreSource
     }
 
     /// <summary>The Examine provider's index that serves queries for an alias, or null.</summary>
-    private IIndex? PhysicalIndex(string alias)
-    {
-        ContentIndexRegistration? registration = _registrations.FirstOrDefault(candidate =>
-            string.Equals(candidate.IndexAlias, alias, StringComparison.OrdinalIgnoreCase)
+    private IIndex? PhysicalIndex(string alias) =>
+        UmbracoSearchPhysicalIndexes.Find(
+            _registrations,
+            alias,
+            _activeIndexManager,
+            _examineManager
         );
-        if (
-            registration is null
-            || _activeIndexManager is null
-            || !typeof(IExamineIndexer).IsAssignableFrom(registration.Indexer)
-        )
-        {
-            return null;
-        }
-
-        return _examineManager.TryGetIndex(
-            _activeIndexManager.ResolveActiveIndexName(registration.IndexAlias),
-            out IIndex? index
-        )
-            ? index
-            : null;
-    }
 
     /// <summary>Reads the entities of the documents found, by key.</summary>
     private Dictionary<Guid, IEntitySlim> Entities(Document[] documents)

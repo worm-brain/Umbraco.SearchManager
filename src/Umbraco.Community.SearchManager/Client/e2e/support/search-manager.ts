@@ -26,6 +26,67 @@ export async function openExplore(page: Page, index = "ExternalIndex"): Promise<
 }
 
 /**
+ * Opens the Diagnose view's field statistics for an index and waits for the table.
+ *
+ * @param page - A logged-in page.
+ * @param index - The index.
+ */
+export async function openFieldStatistics(page: Page, index = "ExternalIndex"): Promise<void> {
+  await page.goto(`${WORKSPACE}/view/diagnose?index=${encodeURIComponent(index)}&tool=fields`);
+  await expect(page.locator("search-manager-field-statistics uui-table").first()).toBeVisible({ timeout: 60_000 });
+}
+
+/**
+ * One row of the field statistics table.
+ *
+ * @param page - A page on the Diagnose view's Fields tool.
+ * @param field - The field name, as the row's first cell shows it.
+ * @returns The locator of the row.
+ */
+export function fieldRow(page: Page, field: string): Locator {
+  return page.locator(`search-manager-field-statistics uui-table-row[data-field="${field}"]`).first();
+}
+
+/**
+ * Reads the first number in a text, ignoring thousands separators ("1,234 missing" gives 1234).
+ *
+ * @param text - The text.
+ * @returns The number, or NaN when there is none.
+ */
+export function firstNumber(text: string | null): number {
+  const match = /\d[\d,]*/.exec(text ?? "");
+  return match ? Number(match[0].replace(/,/g, "")) : Number.NaN;
+}
+
+/**
+ * Opens Diagnose's Find a node tool, searches for a document by its exact name and shows it,
+ * waiting for its presence table.
+ *
+ * @param page - A logged-in page.
+ * @param name - The document's exact name.
+ */
+export async function findNode(page: Page, name: string): Promise<void> {
+  await page.goto(`${WORKSPACE}/view/diagnose?tool=node`);
+  const search = page.locator("search-manager-find-node uui-input.search input").first();
+  await expect(search).toBeVisible({ timeout: 60_000 });
+  await search.fill(name);
+  // The candidate's name is uui-ref-node's #open-part button, which fires `open`.
+  await page.locator(`search-manager-find-node uui-ref-node[name="${name}"] #open-part`).first().click();
+  await expect(page.locator("search-manager-node-presence uui-table").first()).toBeVisible({ timeout: 30_000 });
+}
+
+/**
+ * One index's row of a presence table (Find a node, or the "Show in search indexes" sidebar).
+ *
+ * @param page - A page showing a presence table.
+ * @param index - The index name.
+ * @returns The locator of the row.
+ */
+export function presenceRow(page: Page, index: string): Locator {
+  return page.locator(`search-manager-node-presence uui-table-row[data-index="${index}"]`).first();
+}
+
+/**
  * Waits until the open Explore view shows at least `minimum` results for an empty search,
  * reloading while it does not. A fresh sample site seeds its content and indexes it in the
  * background after it starts answering, so the first spec to search may get there first.

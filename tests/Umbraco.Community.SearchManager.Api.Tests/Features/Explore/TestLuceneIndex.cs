@@ -22,7 +22,14 @@ internal sealed class TestLuceneIndex : IDisposable
     /// <param name="name">The index name.</param>
     /// <param name="documents">The documents.</param>
     public TestLuceneIndex(string name, params ValueSet[] documents)
-        : this(name, new KeptRamDirectory())
+        : this(name, null, documents) { }
+
+    /// <summary>Creates the index with a value set validator and adds the documents synchronously.</summary>
+    /// <param name="name">The index name.</param>
+    /// <param name="validator">The validator, as Umbraco's indexes have; null for none.</param>
+    /// <param name="documents">The documents, which the validator must let in.</param>
+    public TestLuceneIndex(string name, IValueSetValidator? validator, params ValueSet[] documents)
+        : this(name, new KeptRamDirectory(), validator)
     {
         using (Index.WithThreadingMode(IndexThreadingMode.Synchronous))
         {
@@ -30,12 +37,17 @@ internal sealed class TestLuceneIndex : IDisposable
         }
     }
 
-    private TestLuceneIndex(string name, KeptRamDirectory directory)
+    private TestLuceneIndex(
+        string name,
+        KeptRamDirectory directory,
+        IValueSetValidator? validator = null
+    )
     {
         _directory = directory;
         var options = new LuceneDirectoryIndexOptions
         {
             DirectoryFactory = new GenericDirectoryFactory(_ => _directory),
+            Validator = validator,
             FieldDefinitions = new FieldDefinitionCollection(
                 new FieldDefinition("level", FieldDefinitionTypes.Integer),
                 new FieldDefinition("price", FieldDefinitionTypes.Double),
