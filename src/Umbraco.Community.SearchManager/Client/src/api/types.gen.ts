@@ -93,6 +93,12 @@ export type FacetsResult = {
     fields: Array<FieldFacet>;
 };
 
+export type FailedRebuildSummary = {
+    endedAt: string;
+    error?: string | null;
+    documentsWritten?: number | null;
+};
+
 export type FieldAlias = {
     alias: string;
     field: string;
@@ -157,6 +163,7 @@ export type IndexSummary = {
     properties: {
         [key: string]: string;
     };
+    failedRebuild?: FailedRebuildSummary | null;
 };
 
 export type NativeRequest = {

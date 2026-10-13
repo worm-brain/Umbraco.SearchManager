@@ -34,4 +34,13 @@ internal static partial class IndexLog
         string statistic,
         string indexName
     );
+
+    /// <summary>The rebuild history could not be read, so no index is shown as incomplete.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">What was thrown.</param>
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Could not read the rebuild history; indexes whose last rebuild failed are not shown as incomplete"
+    )]
+    public static partial void HistoryNotRead(this ILogger logger, Exception exception);
 }

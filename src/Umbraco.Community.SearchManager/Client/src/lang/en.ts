@@ -38,6 +38,12 @@ export default {
     healthCorrupted: "Corrupted",
     healthEmpty: "Empty",
     healthIncomplete: "Incomplete",
+    healthIncompleteDetail: (documents: string, error: string) => {
+      const failed = documents
+        ? `Last rebuild failed after writing ${documents} documents`
+        : "Last rebuild failed part-way";
+      return error ? `${failed}: ${error}` : failed;
+    },
     healthUnknown: "Unknown",
 
     // Explore view: pickers and search box.

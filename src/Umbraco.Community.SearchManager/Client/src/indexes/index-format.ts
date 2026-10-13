@@ -1,4 +1,5 @@
-import type { IndexHealth } from "../api/types.gen.js";
+import type { FailedRebuildSummary, IndexHealth } from "../api/types.gen.js";
+import type { TermCall } from "../shared/term-call.js";
 
 /** How a health value is drawn: a UUI icon name and a colour token, always beside its label. */
 export interface HealthLook {
@@ -42,6 +43,22 @@ export function healthLook(health: IndexHealth): HealthLook {
  */
 export function formatCount(value: number | null | undefined, locale = "en-GB"): string {
   return value == null ? "-" : value.toLocaleString(locale);
+}
+
+/**
+ * The line under an Incomplete index's health: how many documents the failed rebuild left and
+ * why it failed. An unknown count or error is passed as an empty string, which the term leaves out.
+ *
+ * @param failed - The rebuild that left the index incomplete.
+ * @param locale - The locale to group digits for.
+ * @returns The term to localize.
+ */
+export function incompleteDetailTerm(failed: FailedRebuildSummary, locale = "en-GB"): TermCall {
+  return [
+    "searchManager_healthIncompleteDetail",
+    failed.documentsWritten == null ? "" : formatCount(failed.documentsWritten, locale),
+    failed.error ?? "",
+  ];
 }
 
 /**

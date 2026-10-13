@@ -69,6 +69,10 @@ public interface IRebuildHistory
     IReadOnlyList<RebuildHistoryEntry> GetRecent(string indexName);
 
     /// <summary>Lists the newest recorded rebuild of every index that has one.</summary>
+    /// <param name="server">
+    /// Only consider rebuilds that ran on this machine (as <see cref="RebuildHistoryEntry.Server"/>
+    /// records it); null considers every server.
+    /// </param>
     /// <returns>One entry per index.</returns>
-    IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex();
+    IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex(string? server = null);
 }

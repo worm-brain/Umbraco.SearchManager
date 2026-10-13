@@ -38,6 +38,11 @@ internal sealed class InMemoryRebuildHistory : IRebuildHistory
     public IReadOnlyList<RebuildHistoryEntry> GetRecent(string indexName) =>
         [.. Entries.Where(entry => entry.IndexName == indexName).Reverse()];
 
-    public IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex() =>
-        [.. Entries.GroupBy(entry => entry.IndexName).Select(group => group.Last())];
+    public IReadOnlyList<RebuildHistoryEntry> GetLatestPerIndex(string? server = null) =>
+        [
+            .. Entries
+                .Where(entry => server is null || entry.Server == server)
+                .GroupBy(entry => entry.IndexName)
+                .Select(group => group.Last()),
+        ];
 }

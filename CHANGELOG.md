@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format follows
   rebuild of empty indexes after the site starts as **At startup**, and rebuilds from the core
   Examine dashboard, a language change or another package as **Started outside Search Manager**,
   with document counts and the error of a failure.
+- An index whose last core Examine rebuild on this server failed part-way shows as
+  **Incomplete**, with the documents it holds and the error, until a rebuild succeeds.
+  `GET /indexes` returns the failure as `failedRebuild`.
 
 ## [18.0.0] - 2026-10-12
 

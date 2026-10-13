@@ -25,7 +25,7 @@ import "../rebuilds/rebuilds-panel.element.js";
 import { describeError } from "../shared/describe-error.js";
 import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { engineOptions, filterByEngine, type EngineFilter } from "./engine-filter.js";
-import { engineLabel, formatBytes, formatCount, healthLook } from "./index-format.js";
+import { engineLabel, formatBytes, formatCount, healthLook, incompleteDetailTerm } from "./index-format.js";
 
 /**
  * The Indexes view: every index the user may see, from every source, with its health and the
@@ -470,7 +470,8 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
 
   /**
    * The health a row shows: a queued or running rebuild (that clears the index) overrides the
-   * index's own health; otherwise the source's health and message.
+   * index's own health; otherwise the source's health and message, which for an Incomplete index
+   * says what the failed rebuild left and why it failed.
    *
    * @param index - The index.
    * @param run - Its latest run, if any.
@@ -485,6 +486,9 @@ export class SearchManagerIndexesViewElement extends UmbLitElement {
         health: "Rebuilding",
         sub: this.#estimateText(run),
       };
+    }
+    if (index.health === "Incomplete" && index.failedRebuild) {
+      return { health: index.health, sub: this.localize.term(...incompleteDetailTerm(index.failedRebuild)) };
     }
     return { health: index.health, sub: index.healthMessage ?? undefined };
   }

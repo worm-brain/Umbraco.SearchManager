@@ -74,6 +74,9 @@ its name.
   [Load-balanced sites](../explanation/how-rebuilds-work.md#load-balanced-sites).
 - **The site restarted during a rebuild.** The queue lives in memory, so queued runs are lost and
   the running one is recorded as failed. Start them again.
+- **An index shows Incomplete.** Its last rebuild on this server failed part-way, so it holds only
+  some documents. Fix the error shown under the label, usually in a populator, then rebuild it.
+  See [Incomplete indexes](../explanation/how-rebuilds-work.md#incomplete-indexes).
 
 ## Related
 

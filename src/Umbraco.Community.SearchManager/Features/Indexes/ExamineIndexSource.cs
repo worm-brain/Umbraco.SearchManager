@@ -6,6 +6,7 @@ using Umbraco.Cms.Infrastructure.Examine;
 using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
+using Umbraco.Community.SearchManager.Core.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Rebuilds;
 using Umbraco.Community.SearchManager.Features.Rebuilds.External;
 
@@ -27,12 +28,18 @@ namespace Umbraco.Community.SearchManager.Features.Indexes;
 /// synchronous processing for the duration: every batch is then committed before the populators
 /// move on, so when the rebuilder returns the index is committed and searchable (ADR 0011).
 /// </para>
+/// <para>
+/// An index whose last rebuild on this server failed after it had been cleared is
+/// <see cref="IndexHealth.Incomplete"/>: the history says so (a failed entry with a document count),
+/// and core Examine indexes are per server, so only this server's entries count.
+/// </para>
 /// </remarks>
 internal sealed class ExamineIndexSource(
     IExamineManager examineManager,
     IIndexDiagnosticsFactory diagnosticsFactory,
     IIndexingRebuilderService rebuilderService,
     IIndexRebuilder indexRebuilder,
+    IRebuildHistory history,
     TimeProvider timeProvider,
     ILogger<ExamineIndexSource> logger
 ) : IIndexSource
@@ -65,6 +72,7 @@ internal sealed class ExamineIndexSource(
         CancellationToken cancellationToken
     )
     {
+        Dictionary<string, RebuildHistoryEntry> failedRebuilds = ReadFailedRebuilds();
         var result = new List<IndexSummary>();
         foreach (
             IIndex index in examineManager
@@ -73,7 +81,7 @@ internal sealed class ExamineIndexSource(
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
-            result.Add(await DescribeAsync(index));
+            result.Add(await DescribeAsync(index, failedRebuilds.GetValueOrDefault(index.Name)));
         }
 
         return result;
@@ -88,19 +96,19 @@ internal sealed class ExamineIndexSource(
     {
         if (!examineManager.TryGetIndex(indexName, out IIndex? index))
         {
-            throw new InvalidOperationException($"There is no Examine index called {indexName}.");
+            throw new RebuildRefusedException($"There is no Examine index called {indexName}.");
         }
 
         if (!CanRebuild(indexName))
         {
-            throw new InvalidOperationException(
+            throw new RebuildRefusedException(
                 "No populator is registered for this index, so Umbraco cannot rebuild it."
             );
         }
 
         if (await rebuilderService.IsRebuildingAsync(indexName))
         {
-            throw new InvalidOperationException(
+            throw new RebuildRefusedException(
                 "Umbraco is already rebuilding this index (started from somewhere else)."
             );
         }
@@ -136,7 +144,7 @@ internal sealed class ExamineIndexSource(
                 );
                 if (!attempt.Success)
                 {
-                    throw new InvalidOperationException(
+                    throw new RebuildRefusedException(
                         attempt.Result switch
                         {
                             IndexRebuildResult.AlreadyRebuilding =>
@@ -173,10 +181,42 @@ internal sealed class ExamineIndexSource(
         return count < 0 ? null : count;
     }
 
+    /// <summary>
+    /// Reads, per index, this server's latest rebuild when it failed part-way (after the index was
+    /// cleared, so it has a document count). A history that cannot be read is logged and treated
+    /// as empty: the page must still list the indexes.
+    /// </summary>
+    /// <returns>The failed rebuilds by index name.</returns>
+    private Dictionary<string, RebuildHistoryEntry> ReadFailedRebuilds()
+    {
+        try
+        {
+            return history
+                .GetLatestPerIndex(Environment.MachineName)
+                .Where(entry =>
+                    entry
+                        is {
+                            Engine: EngineId,
+                            Outcome: RebuildStatus.Failed,
+                            DocumentsAfter: not null
+                        }
+                )
+                .ToDictionary(entry => entry.IndexName, StringComparer.OrdinalIgnoreCase);
+        }
+#pragma warning disable CA1031 // The history only refines health; it must never break the list.
+        catch (Exception exception)
+#pragma warning restore CA1031
+        {
+            logger.HistoryNotRead(exception);
+            return new Dictionary<string, RebuildHistoryEntry>();
+        }
+    }
+
     /// <summary>Builds the summary for one index. Never throws for a broken index.</summary>
     /// <param name="index">The index.</param>
+    /// <param name="failedRebuild">This server's latest rebuild of it, when that failed part-way.</param>
     /// <returns>The summary.</returns>
-    private async Task<IndexSummary> DescribeAsync(IIndex index)
+    private async Task<IndexSummary> DescribeAsync(IIndex index, RebuildHistoryEntry? failedRebuild)
     {
         bool rebuilding = await rebuilderService.IsRebuildingAsync(index.Name);
         bool canRebuild = CanRebuild(index.Name);
@@ -225,9 +265,25 @@ internal sealed class ExamineIndexSource(
             healthMessage = exception.Message;
         }
 
+        // Incomplete only refines an index that otherwise looks fine: the problems that make it
+        // unreadable, and a rebuild in progress, matter more.
+        FailedRebuildSummary? failedRebuildSummary = null;
+        if (failedRebuild is not null && health is IndexHealth.Healthy or IndexHealth.Empty)
+        {
+            health = IndexHealth.Incomplete;
+            healthMessage = failedRebuild.Error;
+            failedRebuildSummary = new FailedRebuildSummary(
+                failedRebuild.EndedAt,
+                failedRebuild.Error,
+                failedRebuild.DocumentsAfter
+            );
+        }
+
         if (rebuilding)
         {
             health = IndexHealth.Rebuilding;
+            healthMessage = null;
+            failedRebuildSummary = null;
         }
 
         LuceneIndexStatistics? statistics =
@@ -261,7 +317,8 @@ internal sealed class ExamineIndexSource(
             RebuildUnavailableReason: rebuildReason,
             ZeroDowntime: false,
             IsMemberIndex: isMember,
-            Properties: properties
+            Properties: properties,
+            FailedRebuild: failedRebuildSummary
         );
     }
 

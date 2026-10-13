@@ -18,7 +18,7 @@ Settings access, and request a token with the client credentials flow from
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /indexes` | Lists every index with its engine, health, health message, document, deleted document and field counts, size, and what it supports (rebuild, search, raw Lucene). |
+| `GET /indexes` | Lists every index with its engine, health, health message, document, deleted document and field counts, size, and what it supports (rebuild, search, raw Lucene). An `Incomplete` index also has `failedRebuild`: when the failed rebuild ended, its error, and the documents it left. |
 | `GET /server` | Names this server, its role, and whether the site runs on more than one server. |
 | `GET /settings` | The settings the backoffice needs, currently `hideCoreExamineDashboard`. |
 

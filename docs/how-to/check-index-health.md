@@ -38,6 +38,7 @@ Each row is one index. The badge beside its name says which engine runs it: **Ex
 | **Queued for rebuild** | A Search Manager rebuild is waiting its turn. |
 | **Unhealthy** | The index opens but the engine reports a problem, shown under the label. |
 | **Corrupted** | The index cannot be read, so it is probably corrupt or locked. The error is shown under the label. Rebuild it. |
+| **Incomplete** | The last rebuild on this server failed part-way, so the index holds only some documents. How many, and the error, are shown under the label. Fix the error and rebuild it. See [Incomplete indexes](../explanation/how-rebuilds-work.md#incomplete-indexes). |
 | **Unknown** | The engine did not say. |
 
 A corrupt index is listed with its error instead of breaking the page.

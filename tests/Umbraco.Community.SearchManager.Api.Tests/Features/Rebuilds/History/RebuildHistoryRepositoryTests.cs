@@ -123,6 +123,24 @@ public sealed class RebuildHistoryRepositoryTests : IAsyncLifetime
     }
 
     [Fact]
+    public void GetLatestPerIndex_Server_IgnoresRunsOnOtherServers()
+    {
+        // Arrange
+        _repository.Add(Entry("ProductIndex", 0));
+        _repository.Add(Entry("ProductIndex", 1) with { Server = "WEB02" });
+        _repository.Add(Entry("ExternalIndex", 2) with { Server = "WEB02" });
+
+        // Act
+        IReadOnlyList<RebuildHistoryEntry> latest = _repository.GetLatestPerIndex("web01");
+
+        // Assert
+        Assert.Equal(
+            [("ProductIndex", Start)],
+            latest.Select(entry => (entry.IndexName, entry.StartedAt))
+        );
+    }
+
+    [Fact]
     public void Add_StartupRun_IsReadBackWithTheStartupTrigger()
     {
         // Arrange
