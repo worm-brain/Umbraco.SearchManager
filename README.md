@@ -94,10 +94,9 @@ search any index with click-to-filter chips instead of hand-written Lucene.
   others do not, and whether a copy is out of date. Then test a search against it chip by chip.
   The content tree's **Show in search indexes** action opens the same answer from the page.
   [Find where a page is indexed](docs/how-to/find-where-a-page-is-indexed.md)
-
-### Coming next
-
-- **Diagnose:** analyzers.
+- **Analyzer:** run a text through two indexes' analyzers side by side, step by step, and see
+  whether a visitor's search finds it, judged with the engine's own query.
+  [See how an index analyzes text](docs/how-to/see-how-an-index-analyzes-text.md)
 
 ## A quick tour
 
