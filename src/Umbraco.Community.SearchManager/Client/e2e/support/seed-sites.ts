@@ -21,11 +21,12 @@ const SETTLE_MS = 75_000;
  * install, the sample content seed and the indexing that follows. A site whose database already
  * exists is left alone.
  *
- * A fresh Umbraco Search site on SQLite can deadlock during that first boot (Umbraco issue 23940:
- * the cache instruction sync holds a transaction while it waits on async cache refresher handlers,
- * which Umbraco Search registers). It is rare locally and common on slow CI runners, and it never
- * clears. So a first boot that stalls, times out or exits early is retried on a fresh database,
- * and the tests then start a site that has finished booting once.
+ * On SQLite, seeding a site while Umbraco Search runs can deadlock Umbraco's cache instruction sync
+ * (Umbraco issue 23940: the sync holds a transaction while it waits on async cache refresher
+ * handlers, which Umbraco Search registers). On slow CI runners that happened on almost every
+ * first boot and never cleared. So the first boot leaves Umbraco Search out, and the sites' next
+ * boot, the one the tests use, adds it and indexes the seeded content. A first boot that still
+ * stalls, times out or exits early is retried on a fresh database.
  *
  * Sites are seeded one at a time, so they do not compete for the machine while they seed.
  *
@@ -66,6 +67,9 @@ async function firstBoot(site: E2eSite): Promise<string> {
         ...process.env,
         ASPNETCORE_ENVIRONMENT: "Development",
         Umbraco__CMS__Security__AllowConcurrentLogins: "true",
+        // Seed without Umbraco Search (samples/SharedSearch/UmbracoSearchComposer.cs); the next boot
+        // adds it and it indexes the seeded content then.
+        SearchManagerSamples__SkipUmbracoSearch: "true",
       },
       stdio: ["ignore", "pipe", "pipe"],
       // Its own process group on Linux and macOS, so stopping it also stops the site dotnet run starts.
