@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [18.1.0] - 2026-10-13
+
+The same changes as 17.1.0, for Umbraco 18.
+
+## [17.1.0] - 2026-10-13
+
 ### Added
 
 - Diagnose > Analyzer: type a text and a search and see, side by side for two indexes, how each
