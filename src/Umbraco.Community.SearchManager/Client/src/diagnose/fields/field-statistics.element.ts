@@ -21,7 +21,7 @@ import { coverage } from "../../explore/suggestions.js";
 import { formatCount } from "../../indexes/index-format.js";
 import { describeError } from "../../shared/describe-error.js";
 import "../../shared/empty-state.element.js";
-import { exploreUrl } from "../../shared/explore-links.js";
+import { analyzerUrl, exploreUrl } from "../../shared/explore-links.js";
 import { SearchManagerDiagnoseChangeEvent } from "../diagnose-events.js";
 import {
   canFilterOn,
@@ -38,7 +38,8 @@ import {
  *
  * - **Field:** the name a chip takes, its label (or culture, or group), and the physical Lucene
  *   name when it differs (Umbraco Search's `Field_title_texts`).
- * - **Type, analyzer, coverage** (share of live documents with a value, as a `uui-progress-bar`),
+ * - **Type, analyzer** (a link into the Analyzer tool on this field), **coverage** (share of live
+ *   documents with a value, as a `uui-progress-bar`),
  *   **unique terms** ("at least N" when the server sampled).
  * - **Top terms:** each opens Explore with a chip on the field (`Contains` for text, `Is` for
  *   keywords, `Equals` for numbers). Date fields show their range instead. Text fields say their
@@ -269,7 +270,7 @@ export class SearchManagerFieldStatisticsElement extends UmbLitElement {
           ${field.physical && field.physical !== field.name ? html`<div class="sub mono">${field.physical}</div>` : nothing}
         </uui-table-cell>
         <uui-table-cell><uui-tag look="secondary">${field.type}</uui-tag></uui-table-cell>
-        <uui-table-cell class="sub">${field.analyzer ?? "-"}</uui-table-cell>
+        <uui-table-cell class="sub">${this.#renderAnalyzer(field, result)}</uui-table-cell>
         <uui-table-cell>
           ${
             field.storedOnly
@@ -310,6 +311,26 @@ export class SearchManagerFieldStatisticsElement extends UmbLitElement {
       default:
         return "";
     }
+  }
+
+  /**
+   * Renders the analyzer name as a link into the Analyzer tool, on this index and field, so the
+   * user can see how a value is broken into terms. Stored-only fields have nothing to analyse, and
+   * numbers and dates are written as numeric terms without an analyzer.
+   *
+   * @param field - The field.
+   * @param result - The statistics, for the index name.
+   * @returns The template, or `-` without an analyzer.
+   */
+  #renderAnalyzer(field: FieldStatistic, result: FieldStatisticsResult) {
+    if (!field.analyzer) return "-";
+    if (field.storedOnly || field.type === "Number" || field.type === "Date") return field.analyzer;
+    return html`<a
+      class="analyzer"
+      href=${analyzerUrl(result.target.name, field.name)}
+      title=${this.localize.term("searchManager_analyzerTryField", field.name)}
+      >${field.analyzer}</a
+    >`;
   }
 
   /**

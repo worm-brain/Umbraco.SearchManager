@@ -4,6 +4,58 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:44382' | (string & {});
 };
 
+export type AnalysisResult = {
+    target: ExploreTarget;
+    available: boolean;
+    unavailableReason?: string | null;
+    field: string;
+    analyzer?: string | null;
+    stagesShown: boolean;
+    stagesNote?: string | null;
+    stages: Array<AnalysisStage>;
+    search?: SearchTermResult | null;
+    searchUnavailableReason?: string | null;
+    truncated: boolean;
+};
+
+export type AnalysisStage = {
+    name: string;
+    detail?: string | null;
+    tokens: Array<AnalysisToken>;
+};
+
+export type AnalysisToken = {
+    text: string;
+    position: number;
+    startOffset: number;
+    endOffset: number;
+    state: TokenState;
+    match: TokenMatch;
+};
+
+export type AnalyzeRequest = {
+    field: string;
+    text: string;
+    searchTerm?: string | null;
+};
+
+export type AnalyzerField = {
+    name: string;
+    label?: string | null;
+    type: FieldType;
+    group: FieldGroup;
+    analyzer: string;
+    physical?: string | null;
+};
+
+export type AnalyzerFieldsResult = {
+    target: ExploreTarget;
+    available: boolean;
+    unavailableReason?: string | null;
+    defaultField?: string | null;
+    fields: Array<AnalyzerField>;
+};
+
 export type ClauseMatch = {
     index: number;
     matched?: boolean | null;
@@ -415,6 +467,21 @@ export type SearchManagerSettings = {
     hideCoreExamineDashboard: boolean;
 };
 
+export type SearchTermPart = {
+    kind: SearchTermPartKind;
+    text: string;
+    required: boolean;
+    group: number;
+};
+
+export type SearchTermPartKind = 'Word' | 'Prefix' | 'Wildcard' | 'Phrase' | 'Fuzzy' | 'Other';
+
+export type SearchTermResult = {
+    matches: boolean;
+    parts: Array<SearchTermPart>;
+    notes: Array<string>;
+};
+
 export type ServerInfo = {
     machineName: string;
     role: ServerRoleModel;
@@ -442,6 +509,10 @@ export type TermsResult = {
     sampled: boolean;
 };
 
+export type TokenMatch = 'None' | 'Exact' | 'Prefix' | 'Pattern';
+
+export type TokenState = 'Kept' | 'Changed' | 'Removed' | 'Added';
+
 export type UnsupportedFilter = {
     kind: FilterKind;
     types: Array<FieldType>;
@@ -454,6 +525,80 @@ export type ValueRange = {
     min: string;
     max: string;
 };
+
+export type AnalyzeData = {
+    body?: AnalyzeRequest;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer';
+};
+
+export type AnalyzeErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type AnalyzeError = AnalyzeErrors[keyof AnalyzeErrors];
+
+export type AnalyzeResponses = {
+    /**
+     * OK
+     */
+    200: AnalysisResult;
+};
+
+export type AnalyzeResponse = AnalyzeResponses[keyof AnalyzeResponses];
+
+export type GetAnalyzerFieldsData = {
+    body?: never;
+    path: {
+        target: string;
+    };
+    query?: never;
+    url: '/umbraco/search-manager/api/v1/diagnose/{target}/analyzer/fields';
+};
+
+export type GetAnalyzerFieldsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * The authenticated user does not have access to this resource
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+};
+
+export type GetAnalyzerFieldsError = GetAnalyzerFieldsErrors[keyof GetAnalyzerFieldsErrors];
+
+export type GetAnalyzerFieldsResponses = {
+    /**
+     * OK
+     */
+    200: AnalyzerFieldsResult;
+};
+
+export type GetAnalyzerFieldsResponse = GetAnalyzerFieldsResponses[keyof GetAnalyzerFieldsResponses];
 
 export type GetFieldStatisticsData = {
     body?: never;

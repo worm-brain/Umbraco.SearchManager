@@ -14,6 +14,7 @@ import {
   type DiagnoseTool,
   type DiagnoseViewState,
 } from "./diagnose-state.js";
+import "./analyzer/analyzer.element.js";
 import "./fields/field-statistics.element.js";
 import "./node/find-node.element.js";
 
@@ -29,12 +30,18 @@ interface DiagnoseToolDefinition {
   /** Whether the tool works on one index, so the index picker shows. */
   usesIndex: boolean;
   /**
+   * Whether the tool needs the list of indexes (it has pickers of its own), so it waits for them
+   * and shows the empty state when there are none.
+   */
+  needsTargets: boolean;
+  /**
    * Renders the tool.
    *
    * @param target - The picked index; undefined for a tool that does not use one.
+   * @param targets - Every index (both engines); empty for a tool that does not need them.
    * @returns The template.
    */
-  render: (target: ExploreTarget | undefined) => TemplateResult | typeof nothing;
+  render: (target: ExploreTarget | undefined, targets: ReadonlyArray<ExploreTarget>) => TemplateResult | typeof nothing;
 }
 
 /**
@@ -42,8 +49,9 @@ interface DiagnoseToolDefinition {
  * above the tool itself.
  *
  * - **Tools:** a data-driven list ({@link SearchManagerDiagnoseViewElement.tools}); add a tool by
- *   adding an entry. Today: Fields (`search-manager-field-statistics`) and Find a node
- *   (`search-manager-find-node`, which works across indexes, so the index picker hides).
+ *   adding an entry. Today: Fields (`search-manager-field-statistics`), Analyzer
+ *   (`search-manager-analyzer`, which has two index pickers of its own, so the shared one hides)
+ *   and Find a node (`search-manager-find-node`, which works across indexes, so the picker hides).
  * - **Index picker:** the index targets of `GET /explore/targets` (searchers are left out; member
  *   indexes are already filtered by the server for users without Members access).
  * - **URL:** the state (tool, index, the tools' own keys) is written to the query string with
@@ -74,6 +82,7 @@ export class SearchManagerDiagnoseViewElement extends UmbLitElement {
       tool: "fields",
       label: "searchManager_diagnoseFields",
       usesIndex: true,
+      needsTargets: true,
       render: (target) =>
         target
           ? html`<search-manager-field-statistics
@@ -84,9 +93,26 @@ export class SearchManagerDiagnoseViewElement extends UmbLitElement {
           : nothing,
     },
     {
+      tool: "analyzer",
+      label: "searchManager_diagnoseAnalyzer",
+      usesIndex: false,
+      needsTargets: true,
+      render: (_target, targets) =>
+        html`<search-manager-analyzer
+          .targets=${targets}
+          .text=${this._state.text}
+          .term=${this._state.term}
+          .left=${this._state.left}
+          .leftField=${this._state.leftField}
+          .right=${this._state.right}
+          .rightField=${this._state.rightField}
+        ></search-manager-analyzer>`,
+    },
+    {
       tool: "node",
       label: "searchManager_diagnoseFindNode",
       usesIndex: false,
+      needsTargets: false,
       render: () =>
         html`<search-manager-find-node
           .nodeKey=${this._state.node}
@@ -151,21 +177,21 @@ export class SearchManagerDiagnoseViewElement extends UmbLitElement {
    */
   override render() {
     const tool = this.#tool;
-    // Only the tools that work on one index need one; Find a node works without.
-    if (tool.usesIndex && this._targets && this._targets.length === 0) {
+    // Only the tools that work on indexes need them; Find a node works without.
+    if (tool.needsTargets && this._targets && this._targets.length === 0) {
       return html`<search-manager-empty-state headline=${this.localize.term("searchManager_tabDiagnose")}>
         <p>${this.localize.term("searchManager_diagnoseNoTargets")}</p>
       </search-manager-empty-state>`;
     }
 
     const target = this.#target;
-    const waiting = tool.usesIndex && !this._targets;
+    const waiting = tool.needsTargets && !this._targets;
     return html`
       <div class="bar">${this.#renderSwitcher(tool)} ${tool.usesIndex ? this.#renderIndexPicker(target) : nothing}</div>
       ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : nothing}
       ${waiting && !this._error ? html`<uui-loader-bar></uui-loader-bar>` : nothing}
       <div @search-manager-diagnose-change=${(event: SearchManagerDiagnoseChangeEvent) => this.#update(event.change)}>
-        ${waiting ? nothing : tool.render(tool.usesIndex ? target : undefined)}
+        ${waiting ? nothing : tool.render(tool.usesIndex ? target : undefined, tool.needsTargets ? (this._targets ?? []) : [])}
       </div>
     `;
   }

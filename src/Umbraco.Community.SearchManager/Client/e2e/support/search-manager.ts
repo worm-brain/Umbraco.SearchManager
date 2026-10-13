@@ -136,3 +136,32 @@ export function searchBox(page: Page): Locator {
 export function selectBox(page: Page, index: string): Locator {
   return page.locator(`uui-checkbox[aria-label="Select ${index}"]:visible`).first();
 }
+
+/**
+ * Opens the Diagnose view's Analyzer tool with its state in the URL.
+ *
+ * @param page - A logged-in page.
+ * @param state - The text, search and indexes; the view's defaults for anything left out.
+ */
+export async function openAnalyzer(
+  page: Page,
+  state: { text?: string; term?: string; left?: string; right?: string } = {},
+): Promise<void> {
+  const query = new URLSearchParams({ tool: "analyzer" });
+  for (const [key, value] of Object.entries(state)) if (value) query.set(key, value);
+  await page.goto(`${WORKSPACE}/view/diagnose?${query.toString()}`);
+  await expect(page.locator("search-manager-analyzer search-manager-analyzer-column").first()).toBeVisible({
+    timeout: 60_000,
+  });
+}
+
+/**
+ * One column of the Analyzer tool.
+ *
+ * @param page - A page on the Analyzer tool.
+ * @param index - The column's index.
+ * @returns The locator of the column.
+ */
+export function analyzerColumn(page: Page, index: string): Locator {
+  return page.locator(`search-manager-analyzer-column[data-index="${index}"]`);
+}
