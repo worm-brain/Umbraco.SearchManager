@@ -81,7 +81,8 @@ async function dumpSiteThreads(site: E2eSite): Promise<void> {
   if (!process.env.CI) return;
   const name = `SearchManager.${site.umbracoSearch ? "SearchSite" : "Site"}${site.major}`;
   try {
-    const pid = execSync(`pgrep -f -n "${name}"`).toString().trim();
+    // The bracket keeps pgrep from matching the shell that runs it.
+    const pid = execSync(`pgrep -f -o "[${name[0]}]${name.slice(1)}"`).toString().trim();
     const stacks = execSync(`$HOME/.dotnet/tools/dotnet-stack report -p ${pid}`, { maxBuffer: 64 * 1024 * 1024 });
     await mkdir("e2e/test-results", { recursive: true });
     await writeFile(`e2e/test-results/stacks-${site.name}-${Date.now()}.txt`, stacks);
