@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Filter } from "../api/index.js";
 import {
   appendFilters,
+  chipReasons,
   disabledReason,
   fieldLabel,
   isFilter,
@@ -130,5 +131,30 @@ describe("disabledReason", () => {
 
   it("disables nothing while the schema loads", () => {
     expect(disabledReason({ ...product, field: "colour" }, undefined, target, term)).toBeUndefined();
+  });
+});
+
+describe("chipReasons", () => {
+  const lucene: Filter = { kind: "Lucene", field: null, op: "Contains", value: "a:b", exclude: false };
+  const noLucene = { ...target, capabilities: { ...target.capabilities, nativeQuery: false } };
+
+  it("gives the server's reason for the chip it skipped", () => {
+    const server = { filters: [product, level], skipped: [{ index: 1, reason: "Not a number" }] };
+    expect(chipReasons([product, level], schema, target, server, term)).toEqual([undefined, "Not a number"]);
+  });
+
+  it("maps the server's index past a chip the client disabled", () => {
+    // The Lucene chip is disabled, so it was not sent: sent index 1 is the third chip.
+    const server = { filters: [product, level], skipped: [{ index: 1, reason: "Not a number" }] };
+    expect(chipReasons([product, lucene, level], schema, noLucene, server, term)).toEqual([
+      undefined,
+      "ExternalIndex does not take raw Lucene queries",
+      "Not a number",
+    ]);
+  });
+
+  it("ignores a result for chips that have changed since", () => {
+    const server = { filters: [product], skipped: [{ index: 0, reason: "Stale" }] };
+    expect(chipReasons([level], schema, target, server, term)).toEqual([undefined]);
   });
 });

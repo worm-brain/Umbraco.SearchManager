@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createExploreState, decodeExploreState, encodeExploreState, mergeIntoSearch } from "./explore-state.js";
+import {
+  createExploreState,
+  decodeExploreState,
+  effectiveCulture,
+  encodeExploreState,
+  mergeIntoSearch,
+} from "./explore-state.js";
+import { schema } from "./term.test-helper.js";
 
 describe("explore view state in the URL", () => {
   it("round-trips every field", () => {
@@ -60,7 +67,40 @@ describe("explore view state in the URL", () => {
     expect(decoded).toEqual([undefined, undefined, undefined, undefined]);
   });
 
+  it.each([
+    ["the default culture", undefined, ""],
+    ["explicitly no culture", null, "culture="],
+    ["a culture", "da-DK", "culture=da-DK"],
+  ])("round-trips %s", (_name, culture, encoded) => {
+    const params = encodeExploreState({ ...createExploreState(), culture });
+    expect(params.toString()).toBe(encoded);
+    expect(decodeExploreState(params).culture).toBe(culture);
+  });
+
   it("keeps other query-string keys when merging", () => {
     expect(mergeIntoSearch("?other=1&index=Old", new URLSearchParams("index=New"))).toBe("other=1&index=New");
+  });
+});
+
+describe("effectiveCulture", () => {
+  const withDefault = { ...schema, defaultCulture: "en-US" };
+
+  it("uses the schema's default when no culture was picked", () => {
+    expect(effectiveCulture(undefined, withDefault)).toBe("en-US");
+  });
+
+  it("uses no culture when none was picked explicitly", () => {
+    expect(effectiveCulture(null, withDefault)).toBeUndefined();
+  });
+
+  it("uses the picked culture", () => {
+    expect(effectiveCulture("da-DK", withDefault)).toBe("da-DK");
+  });
+
+  it("uses no culture while the schema is unknown or has no default", () => {
+    expect([effectiveCulture(undefined, undefined), effectiveCulture(undefined, schema)]).toEqual([
+      undefined,
+      undefined,
+    ]);
   });
 });

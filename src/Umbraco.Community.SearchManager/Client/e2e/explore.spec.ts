@@ -73,3 +73,20 @@ test("compares two results field by field with differences only", async ({ page 
   // The query normalisation is the same for both documents, so at least that row goes.
   await expect.poll(() => rows.count()).toBeLessThan(all);
 });
+
+test("reads a single hit as 1 document", async ({ page }) => {
+  await searchBox(page).fill("type:home");
+  await searchBox(page).press("Enter");
+
+  await expect(resultsCount(page)).toHaveText("1 document, newest first");
+});
+
+test("keeps a field's other values in the fields panel after picking one", async ({ page }) => {
+  await searchBox(page).fill("type:product");
+  await searchBox(page).press("Enter");
+  await expect(page.locator("search-manager-filter-chip")).toHaveCount(1);
+
+  // Counted without the field's own chip, so the other document types stay listed, as written.
+  const values = page.locator("search-manager-fields-panel section.facet .value button .text");
+  await expect(values.filter({ hasText: /^blogPost$/ })).toBeVisible();
+});

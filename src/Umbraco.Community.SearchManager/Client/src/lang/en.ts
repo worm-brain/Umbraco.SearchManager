@@ -8,6 +8,28 @@ import type { UmbLocalizationDictionary } from "@umbraco-cms/backoffice/localiza
  * backoffice falls back to `en` for any culture without its own dictionary. Entries that take
  * values are functions; `localize.term(key, ...args)` passes the arguments through.
  */
+/**
+ * A count in British English digit grouping, or `-` when unknown.
+ *
+ * @param count - The count.
+ * @returns The text.
+ */
+function n(count: number | null | undefined): string {
+  return count == null ? "-" : count.toLocaleString("en-GB");
+}
+
+/**
+ * A count with its noun, singular for exactly one: `1 document`, `2,104 documents`.
+ *
+ * @param count - The count; unknown reads `-` with the plural.
+ * @param one - The singular noun.
+ * @param many - The plural noun.
+ * @returns The text.
+ */
+function plural(count: number | null | undefined, one: string, many: string): string {
+  return `${n(count)} ${count === 1 ? one : many}`;
+}
+
 export default {
   searchManager: {
     // Workspace, menu item and tabs.
@@ -44,6 +66,7 @@ export default {
     exploreIndex: "Index",
     exploreCulture: "Culture",
     exploreAllCultures: "All cultures",
+    exploreNoCulture: "No culture (invariant content only)",
     exploreSearcher: (name: string) => `${name} (searcher)`,
     exploreTargetsError: (message: string) => `Could not load the indexes: ${message}`,
     exploreNoTargets: "There is no index you can search.",
@@ -62,7 +85,7 @@ export default {
     chipHasValue: (field: string) => `${field} has a value`,
     chipEdit: (description: string) => `Edit filter: ${description}`,
     chipRemove: (description: string) => `Remove filter: ${description}`,
-    chipDisabled: (reason: string) => `${reason}. Not sent.`,
+    chipDisabled: (reason: string) => `${reason}. Left out of the search.`,
     chipUnknownField: (field: string, index: string) => `There is no field "${field}" in ${index}`,
     chipWrongOperator: (op: string, type: string) => `"${op}" does not apply to ${type} fields`,
     chipNoLucene: (index: string) => `${index} does not take raw Lucene queries`,
@@ -96,8 +119,8 @@ export default {
 
     // Results.
     resultsLabel: "Search results",
-    resultsCount: (count: number) => (count === 1 ? "1 result" : `${count.toLocaleString("en-GB")} results`),
-    resultsWhole: (count: number) => `${count.toLocaleString("en-GB")} documents, newest first`,
+    resultsCount: (count: number) => plural(count, "result", "results"),
+    resultsWhole: (count: number) => `${plural(count, "document", "documents")}, newest first`,
     resultsNone: "No documents match. Remove a filter, or check the field names.",
     resultsSkipped: (count: number) => (count === 1 ? "1 filter was not sent" : `${count} filters were not sent`),
     columnScore: "Score",
@@ -141,7 +164,7 @@ export default {
     explainTotal: (score: string) => `Score ${score}`,
     explainSum: "The sum of",
     explainCoord: (matched: string, of: string) =>
-      `${matched} of ${of} optional clauses matched, so the score is scaled by ${matched}/${of}`,
+      `${matched} of ${of} optional ${of === "1" ? "clause" : "clauses"} matched, so the score is scaled by ${matched}/${of}`,
     explainTermMatch: (field: string, word: string, times: string) => `${field} contains "${word}" ${times}`,
     explainPhraseMatch: (field: string, phrase: string, times: string) =>
       `${field} contains the phrase "${phrase}" ${times}`,
@@ -157,7 +180,8 @@ export default {
     explainIdf: (value: string) => `idf ${value}`,
     explainFieldNorm: (value: string) => `field norm ${value}`,
     explainBoost: (value: string) => `boost ${value}`,
-    explainDocFreq: (docFreq: string, maxDocs: string) => `in ${docFreq} of ${maxDocs} documents`,
+    explainDocFreq: (docFreq: string, maxDocs: string) =>
+      `in ${docFreq} of ${maxDocs} ${maxDocs === "1" ? "document" : "documents"}`,
     explainMore: (count: number) => (count === 1 ? "1 clause" : `${count} clauses`),
     explainFilterDetail: "How the clause matched",
 
@@ -191,8 +215,8 @@ export default {
     suggestText: "Search all fields for this text",
     suggestHint: "Up and down to move, Enter to pick, Escape to close, -field:value excludes",
     fieldsPanel: "Fields",
-    fieldsWholeIndex: (count: string) => `whole index, ${count} documents`,
-    fieldsResults: (count: string) => `these ${count} results`,
+    fieldsWholeIndex: (count: number) => `whole index, ${plural(count, "document", "documents")}`,
+    fieldsResults: (count: number) => (count === 1 ? "this 1 result" : `these ${n(count)} results`),
     fieldsSampled: "Some values are left out: the field has more values than are counted.",
     fieldsError: (message: string) => `Could not count values: ${message}`,
     fieldsNoValues: "No values",
@@ -233,7 +257,7 @@ export default {
     queryRequestNote:
       "Document types are shown by alias; the filter sends the content type key. Without a culture, Umbraco Search finds only documents that do not vary by culture.",
     queryCopy: "Copy",
-    queryNotSent: (chip: string, reason: string) => `Not sent: ${chip}. ${reason}.`,
+    queryNotSent: (chip: string, reason: string) => `Left out: ${chip}. ${reason}.`,
     queryError: (message: string) => `Could not show the query: ${message}`,
     // Engine filter (Umbraco Search adapter).
     engineFilterLabel: "Engine",
@@ -274,14 +298,15 @@ export default {
     rebuildsProgressLabel: (name: string) => `${name} rebuild progress, estimated`,
     rebuildsWaiting: (position: number) => (position === 1 ? "Waiting, next in line" : `Waiting, ${position} in line`),
     rebuildsStarting: "Starting",
-    rebuildsRunning: (written: string, total: string, percent: number) =>
-      `About ${written} of ${total} documents (${percent}%), estimated from the last run`,
-    rebuildsRunningNoEstimate: (written: string) => `${written} documents so far`,
+    rebuildsRunning: (written: number | null, total: number | null, percent: number) =>
+      `About ${n(written)} of ${plural(total, "document", "documents")} (${percent}%), estimated from the last run`,
+    rebuildsRunningNoEstimate: (written: number | null) => `${plural(written, "document", "documents")} so far`,
     rebuildsRunningZeroDowntime: (percent: number | null) =>
       percent === null
         ? "Building a fresh copy. Search keeps using the current one."
         : `Building a fresh copy. Search keeps using the current one. About ${percent}%, estimated`,
-    rebuildsSucceeded: (duration: string, documents: string) => `Done in ${duration}, ${documents} documents`,
+    rebuildsSucceeded: (duration: string, documents: number | null) =>
+      `Done in ${duration}, ${plural(documents, "document", "documents")}`,
     rebuildsSucceededEmpty: (duration: string) => `Done in ${duration}, nothing to index`,
     rebuildsFailed: (duration: string, error: string) => `Failed after ${duration}: ${error}`,
     rebuildsCancelled: "Cancelled before it started",

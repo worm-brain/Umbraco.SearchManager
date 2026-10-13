@@ -46,3 +46,20 @@ test("Explain score is unavailable with the reason", async ({ page }) => {
   const drawer = page.locator("search-manager-document-drawer");
   await expect(drawer.getByText("Umbraco Search does not return scores").first()).toBeVisible();
 });
+
+test("starts on the site's default culture", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+
+  await expect(page.locator("uui-select#culture select")).toHaveValue("en-US");
+  await waitForSeededIndex(page, 10);
+});
+
+test("strikes through a chip the server left out", async ({ page }) => {
+  await openExplore(page, PUBLISHED);
+  await waitForSeededIndex(page, 10);
+
+  await searchBox(page).fill("type:nosuchtype");
+  await searchBox(page).press("Enter");
+
+  await expect(page.locator("search-manager-filter-chip uui-tag.disabled")).toHaveCount(1);
+});

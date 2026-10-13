@@ -15,12 +15,13 @@ import { SearchManagerAddFilterEvent, SearchManagerFiltersChangeEvent } from "./
 import {
   createExploreState,
   decodeExploreState,
+  effectiveCulture,
   encodeExploreState,
   mergeIntoSearch,
   PAGE_SIZE,
   type ExploreViewState,
 } from "./explore-state.js";
-import { appendFilters, disabledReason, toggleFilter } from "./filters.js";
+import { appendFilters, chipReasons, disabledReason, toggleFilter } from "./filters.js";
 import "./document-drawer.element.js";
 import "./score-compare.element.js";
 import type { CompareDocument } from "./score-compare.element.js";
@@ -49,9 +50,11 @@ const CLOSED: Pick<ExploreViewState, "doc" | "explain" | "compare"> = {
  * The Explore tab: search an index or searcher with filter chips.
  *
  * - **Pickers:** the targets from `GET /explore/targets` (indexes, then searchers registered on
- *   their own) and the site's cultures; the culture switches culture-variant fields.
+ *   their own) and the site's cultures; the culture switches culture-variant fields. With no
+ *   culture in the URL, requests use the schema's default culture; "No culture" is explicit.
  * - **Search box:** chips from `POST /explore/{target}/parse`; chips the target cannot run are
- *   drawn disabled and not sent.
+ *   drawn disabled and not sent. Chips the server skipped are drawn disabled with its reason,
+ *   but still sent, so the server's indexes keep pointing at the same chips.
  * - **Results:** `POST /explore/{target}/search` on every change of target, culture, chips or
  *   page; a newer search aborts the one in flight. The drawer shows the open document's fields.
  * - **Native mode:** "Lucene" (offered for Lucene searchers only) moves the last query into a raw
@@ -100,6 +103,10 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
    */
   @state()
   private _query?: SentQuery;
+
+  /** The query {@link _result} answered, so its `skipped` indexes are only applied to it. */
+  @state()
+  private _resultQuery?: SentQuery;
 
   #search?: AbortController;
   #schemaFor?: string;
@@ -178,7 +185,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     const query: SentQuery = {
       filters: native === undefined ? filters : [],
       native: native ?? null,
-      culture: this._state.culture ?? null,
+      culture: effectiveCulture(this._state.culture, this._schema) ?? null,
     };
     if (JSON.stringify(query) !== JSON.stringify(this._query)) this._query = query;
     this._loading = true;
@@ -195,6 +202,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     this._loading = false;
     if (data) {
       this._result = data;
+      this._resultQuery = query;
       this._error = undefined;
     } else {
       this._error = this.localize.term("searchManager_searchError", describeError(error, response));
@@ -293,6 +301,8 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     const target = this.#target;
     const native = this._state.native !== undefined && (target?.capabilities.nativeQuery ?? false);
     const openHit = this._result?.hits.find((hit) => hit.id === this._state.doc);
+    const culture = effectiveCulture(this._state.culture, this._schema);
+    const reasons = this.#chipReasons(target);
     const compared = this.#comparedDocuments();
     return html`
       <uui-box class="query">
@@ -310,6 +320,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
                   .target=${target}
                   .schema=${this._schema}
                   .filters=${this._state.filters}
+                  .reasons=${reasons}
                   @search-manager-filters-change=${(event: SearchManagerFiltersChangeEvent) =>
                     this.#setFilters(event.filters)}
                 ></search-manager-search-box>`
@@ -331,8 +342,8 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
                 .target=${target}
                 .schema=${this._schema}
                 .filters=${native ? [] : this._sent}
-                .notSent=${native ? [] : this.#notSent(target)}
-                .culture=${this._state.culture}
+                .notSent=${native ? [] : this.#notSent(reasons)}
+                .culture=${culture}
                 .native=${native ? (this._state.native ?? "") : undefined}
               ></search-manager-show-query-panel>`
             : nothing
@@ -361,7 +372,7 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
           .schema=${this._schema}
           .filters=${this._sent}
           .allFilters=${native ? [] : this._state.filters}
-          .culture=${this._state.culture}
+          .culture=${culture}
         ></search-manager-fields-panel>
         <uui-box class="results">
           <search-manager-results
@@ -414,17 +425,24 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     return [named(ids[0]), named(ids[1])];
   }
 
-  /** The chips left out of the query, with why, for the show-query panel. */
-  #notSent(target: ExploreTarget): Array<{ filter: Filter; reason: string }> {
+  /**
+   * Why each chip does not run: the client's reasons, plus the server's for the chips the last
+   * search skipped, but only while that result answers the chips sent now.
+   */
+  #chipReasons(target: ExploreTarget | undefined): Array<string | undefined> {
     const term = (key: string, ...args: Array<string>) => this.localize.term(key, ...args);
-    const fromServer = new Map((this._result?.skipped ?? []).map((skip) => [skip.index, skip.reason]));
-    let sentIndex = 0;
-    return this._state.filters.flatMap((filter) => {
-      const reason = disabledReason(filter, this._schema, target, term);
-      if (reason) return [{ filter, reason }];
-      // The server's skipped list indexes the chips it was sent.
-      const serverReason = fromServer.get(sentIndex++);
-      return serverReason ? [{ filter, reason: serverReason }] : [];
+    const server =
+      this._result && this._resultQuery
+        ? { filters: this._resultQuery.filters, skipped: this._result.skipped }
+        : undefined;
+    return chipReasons(this._state.filters, this._schema, target, server, term);
+  }
+
+  /** The chips left out of the query, or skipped by the server, with why, for the show-query panel. */
+  #notSent(reasons: ReadonlyArray<string | undefined>): Array<{ filter: Filter; reason: string }> {
+    return this._state.filters.flatMap((filter, index) => {
+      const reason = reasons[index];
+      return reason ? [{ filter, reason }] : [];
     });
   }
 
@@ -480,12 +498,22 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
     `;
   }
 
+  /**
+   * The culture picker, preselecting the culture requests use. With a default culture the empty
+   * option is an explicit "no culture"; without one it is the plain "All cultures" it always was.
+   */
   #renderCulturePicker() {
     const cultures = this._schema?.cultures ?? [];
     if (cultures.length === 0) return nothing;
+    const hasDefault = !!this._schema?.defaultCulture;
+    const selected = effectiveCulture(this._state.culture, this._schema)?.toLowerCase();
     const options: Array<SelectOption> = [
-      { name: this.localize.term("searchManager_exploreAllCultures"), value: "", selected: !this._state.culture },
-      ...cultures.map((culture) => ({ name: culture, value: culture, selected: culture === this._state.culture })),
+      {
+        name: this.localize.term(hasDefault ? "searchManager_exploreNoCulture" : "searchManager_exploreAllCultures"),
+        value: "",
+        selected: selected === undefined,
+      },
+      ...cultures.map((culture) => ({ name: culture, value: culture, selected: culture.toLowerCase() === selected })),
     ];
     return html`
       <div class="picker">
@@ -495,7 +523,11 @@ export class SearchManagerExploreViewElement extends UmbLitElement {
           label=${this.localize.term("searchManager_exploreCulture")}
           .options=${options}
           @change=${(event: Event) =>
-            this.#update({ culture: (event.target as HTMLSelectElement).value || undefined, page: 1 })}
+            this.#update({
+              // With a default culture, "no culture" is written as culture= or it reads back as the default.
+              culture: (event.target as HTMLSelectElement).value || (hasDefault ? null : undefined),
+              page: 1,
+            })}
         ></uui-select>
       </div>
     `;

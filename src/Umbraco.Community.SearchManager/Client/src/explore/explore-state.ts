@@ -1,4 +1,4 @@
-import type { Filter } from "../api/index.js";
+import type { ExploreSchema, Filter } from "../api/index.js";
 import { isFilter } from "./filters.js";
 
 /** Results per page in the Explore view. */
@@ -10,8 +10,12 @@ export const PAGE_SIZE = 20;
 export interface ExploreViewState {
   /** The index or searcher; `undefined` picks the first one listed. */
   target?: string;
-  /** The culture whose variant fields are searched; `undefined` is all cultures. */
-  culture?: string;
+  /**
+   * The culture whose variant fields are searched: `undefined` (no `culture` in the URL) is the
+   * schema's default culture, `null` (`culture=`) is explicitly none, a string is that culture.
+   * Requests use {@link effectiveCulture}.
+   */
+  culture?: string | null;
   /** The chips, disabled ones included. */
   filters: Array<Filter>;
   /** Extra result columns: field names. */
@@ -68,7 +72,8 @@ export function createExploreState(): ExploreViewState {
 export function encodeExploreState(state: ExploreViewState): URLSearchParams {
   const params = new URLSearchParams();
   if (state.target) params.set("index", state.target);
-  if (state.culture) params.set("culture", state.culture);
+  // An explicit "no culture" is written empty, so it is not read back as "the default".
+  if (state.culture !== undefined) params.set("culture", state.culture ?? "");
   if (state.filters.length > 0) params.set("f", toBase64Url(JSON.stringify(state.filters)));
   if (state.columns.length > 0) params.set("cols", state.columns.join(","));
   if (state.doc) params.set("doc", state.doc);
@@ -91,7 +96,7 @@ export function decodeExploreState(params: URLSearchParams): ExploreViewState {
   const page = Number(params.get("page"));
   return {
     target: params.get("index") || undefined,
-    culture: params.get("culture") || undefined,
+    culture: params.has("culture") ? params.get("culture") || null : undefined,
     filters: decodeFilters(params.get("f")),
     columns: (params.get("cols") ?? "")
       .split(",")
@@ -118,6 +123,22 @@ function decodeCompare(value: string | null): [string, string] | undefined {
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
   return ids.length === 2 && ids[0] !== ids[1] ? [ids[0]!, ids[1]!] : undefined;
+}
+
+/**
+ * The culture a request runs with: the one picked, none when "no culture" was picked, and the
+ * schema's default culture when nothing was picked.
+ *
+ * @param culture - The state's culture.
+ * @param schema - The target's schema, for its default culture; unknown while it loads.
+ * @returns The culture, or `undefined` for none.
+ */
+export function effectiveCulture(
+  culture: string | null | undefined,
+  schema: ExploreSchema | undefined,
+): string | undefined {
+  if (culture === undefined) return schema?.defaultCulture || undefined;
+  return culture ?? undefined;
 }
 
 /**
