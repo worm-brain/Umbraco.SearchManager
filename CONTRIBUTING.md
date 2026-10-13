@@ -76,7 +76,10 @@ bun run format:check && bun run typecheck && bun run test && bun run build
 bun run e2e   # Playwright on all four sample sites, on their own ports (44390-44393)
 ```
 
-`E2E_SITES=17` runs the end-to-end tests on the Umbraco 17 sites only. Stop any running sample site
+`E2E_SITES=17` runs the end-to-end tests on the Umbraco 17 sites only. Before the tests start, `e2e/prepare.ts`
+gives each site with no database its first boot (install, sample content, indexing) and retries it
+on a fresh database if it stalls: on SQLite, a fresh Umbraco Search site can deadlock in Umbraco's
+cache instruction sync (Umbraco issue 23940), and the deadlock never clears. Stop any running sample site
 first: a locked DLL shows up as build errors.
 
 The release workflow also installs the packed nupkgs on clean sites of each major's lowest
