@@ -70,6 +70,9 @@ search any index with click-to-filter chips instead of hand-written Lucene.
 - **Show query** shows the Lucene your chips send, the query as Lucene parsed it, and C# with
   Examine that runs the same search, each with **Copy**.
   [Use raw Lucene](docs/how-to/use-raw-lucene.md)
+- **Explain a score.** See why a result scored as it did, in plain words: which words matched,
+  how often, how rare they are, and what the filters added. Tick two results to compare their
+  scores part by part. [Search an index](docs/how-to/search-an-index.md#explain-a-score)
 - **Raw Lucene mode** checks the query as you type, marks where it fails to parse, and offers
   one-click fixes for common mistakes such as a lower-case `and` or a date without a range.
   **Back to filters** turns the query into chips again.

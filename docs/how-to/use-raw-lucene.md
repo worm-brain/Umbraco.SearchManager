@@ -50,6 +50,12 @@ Dates in Lucene ranges must be written as `yyyy-MM-dd`, for example
 `updateDate:[2026-10-01 TO *]`. Examine drops a bound it cannot read as a date, so a range in ticks
 silently matches every document.
 
+## Explain a score in raw Lucene
+
+**Explain score** in the document drawer works in raw Lucene mode too, and explains the query as
+typed. Clauses with a minus (must not match) are not listed there: they add no score, and Lucene
+leaves them out of a matching document's explanation.
+
 ## Go back to chips
 
 Choose **Back to filters**. Explore turns each top-level clause that is a simple filter back into

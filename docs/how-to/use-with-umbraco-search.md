@@ -36,8 +36,8 @@ See [Check index health](check-index-health.md) and [Rebuild indexes](rebuild-in
 Choose the index in **Explore** as usual. The chips run through Umbraco Search's own search, not
 raw Lucene, so a few things differ:
 
-- **Pick a culture.** Without one, Umbraco Search finds only documents that do not vary by
-  culture.
+- **The culture starts on the default language.** Without one, Umbraco Search finds only
+  documents that do not vary by culture; choose **No culture (invariant content only)** for those.
 - **Words** become the search query. Text, keyword, number and date chips become typed filters,
   and excluded chips negate them.
 - **A document type chip** shows the alias, and sends the document type's key.
@@ -46,7 +46,7 @@ raw Lucene, so a few things differ:
   many filters were not sent.
 - **Show query** shows the Umbraco Search request in C#.
 - **The drawer** shows the stored fields when the index uses the Examine provider.
-- **Raw Lucene mode** is not available.
+- **Raw Lucene mode** and **Explain score** are not available: Umbraco Search returns no scores.
 
 ![Explore on Umb_PublishedContent with the en-US culture, an "umbraco" chip and a struck-through phrase chip that was not sent](../images/explore-umbraco-search.png)
 
