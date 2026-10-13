@@ -335,6 +335,15 @@ internal sealed class ExamineExploreSource(
             }
 
             field = schema.ForCulture(field, query.Culture);
+
+            // A field is counted without its own include chips, so its other values stay
+            // listed (ADR 0021); most fields have none and reuse the results.
+            IReadOnlyList<Core.Explore.Filter> own = FacetFilters.Without(
+                query.Filters,
+                field.Name,
+                schema,
+                query.Culture
+            );
             if (field.Type == FieldType.Date)
             {
                 // Dates count relative ranges ("on or after 7 days ago"), the values a date chip
@@ -345,7 +354,7 @@ internal sealed class ExamineExploreSource(
                     {
                         LuceneCompilation withRange = Compile(
                             [
-                                .. query.Filters,
+                                .. own,
                                 new Filter(
                                     FilterKind.Field,
                                     field.Name,
@@ -364,11 +373,14 @@ internal sealed class ExamineExploreSource(
                 continue;
             }
 
+            FixedBitSet counted = ReferenceEquals(own, query.Filters)
+                ? documents
+                : Matches(Compile(own, query.Culture, schema, target).Query);
             (IReadOnlyList<TermCount> values, bool sampled) = LuceneTerms.Count(
                 indexSearcher.IndexReader,
                 field.Name,
                 ExamineFields.ValueTypeOf(field.Name, indexes),
-                documents,
+                counted,
                 query.Take
             );
             facets.Add(new FieldFacet(field.Name, field.Type, values, sampled));
