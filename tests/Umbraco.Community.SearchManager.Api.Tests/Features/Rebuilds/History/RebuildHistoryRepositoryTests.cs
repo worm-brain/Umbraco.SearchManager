@@ -122,6 +122,26 @@ public sealed class RebuildHistoryRepositoryTests : IAsyncLifetime
         Assert.Empty(latest);
     }
 
+    [Fact]
+    public void Add_StartupRun_IsReadBackWithTheStartupTrigger()
+    {
+        // Arrange
+        RebuildHistoryEntry entry = Entry("ExternalIndex", 0) with
+        {
+            Trigger = RebuildTrigger.Startup,
+            TriggeredBy = null,
+        };
+
+        // Act
+        _repository.Add(entry);
+
+        // Assert
+        Assert.Equal(
+            RebuildTrigger.Startup,
+            Assert.Single(_repository.GetRecent("ExternalIndex")).Trigger
+        );
+    }
+
     private static RebuildHistoryEntry Entry(string indexName, int hour) =>
         new(
             indexName,

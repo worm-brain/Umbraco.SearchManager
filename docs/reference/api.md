@@ -36,6 +36,10 @@ Settings access, and request a token with the client credentials flow from
 A run is `Queued`, `Running`, `Succeeded`, `Failed` or `Cancelled`. A core Examine run is
 `Succeeded` only once every document is committed and searchable.
 
+A history entry's `trigger` is `User` (from Search Manager, with `triggeredBy`), `Startup`
+(Umbraco's rebuild of empty core Examine indexes after the site starts) or `Other` (anything else
+outside Search Manager).
+
 ## Explore
 
 `{target}` is an index or searcher name, as listed by `GET /explore/targets`.

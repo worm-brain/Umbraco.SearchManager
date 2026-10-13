@@ -4,6 +4,7 @@ import { UmbTextStyles } from "@umbraco-cms/backoffice/style";
 import { RebuildsService } from "../api/sdk.gen.js";
 import type { RebuildHistoryEntry } from "../api/types.gen.js";
 import { engineLabel, formatCount } from "../indexes/index-format.js";
+import { historyTriggerTerm } from "../rebuilds/history-model.js";
 import { formatDuration } from "../rebuilds/rebuild-model.js";
 import { DATE_TIME } from "../shared/backoffice-floor.js";
 import { describeError } from "../shared/describe-error.js";
@@ -98,10 +99,7 @@ export class SearchManagerIndexDetailsModalElement extends UmbModalBaseElement<I
    */
   #renderRun(run: RebuildHistoryEntry) {
     const failed = run.outcome === "Failed";
-    const who =
-      run.trigger === "User" && run.triggeredBy
-        ? this.localize.term("searchManager_historyTriggerUser", run.triggeredBy)
-        : this.localize.term("searchManager_historyTriggerOther");
+    const who = this.localize.term(...historyTriggerTerm(run));
     return html`
       <umb-history-item name=${who} detail=${this.localize.date(run.startedAt, DATE_TIME)}>
         <umb-icon
@@ -115,7 +113,7 @@ export class SearchManagerIndexDetailsModalElement extends UmbModalBaseElement<I
           </uui-tag>
           <span>
             ${
-              // Rebuilds started outside Search Manager carry no document counts.
+              // Umbraco Search rebuilds started outside Search Manager carry no document counts.
               run.documentsBefore == null && run.documentsAfter == null
                 ? this.localize.term(
                     "searchManager_historyDetailNoCounts",

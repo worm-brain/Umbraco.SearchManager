@@ -1,6 +1,7 @@
 # ADR 0012: Rebuild history in a package-migrated table, read through Umbraco's scopes
 
-- Status: Accepted
+- Status: Accepted; partly superseded by ADR 0022 (core Examine rebuilds started outside Search
+  Manager are now recorded, and the trigger `Startup` exists)
 - Date: 2026-10-12
 - Issue: Keep a persisted rebuild history per index
 

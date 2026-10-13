@@ -4,6 +4,14 @@
 - Date: 2026-10-12
 - Issue: Rebuild selected indexes through a server-side queue
 
+> **Correction (2026-10-13, ADR 0022):** the findings below hold for Umbraco 17.0 to 17.2 only.
+> From 17.3, and in every 18 release, `ExamineIndexRebuilder` no longer uses a long-running
+> operation: it tracks rebuilds in memory and queues background work on `IBackgroundTaskQueue`, and
+> a second rebuild of a running index logs a warning and returns `Success` without running, so
+> `AlreadyRebuilding` is never returned there. The core dashboard wraps its call in its own
+> long-running operation (`ExamineIndexRebuild:{name}`) instead. The decision is unchanged: Search
+> Manager checks `IIndexingRebuilderService.IsRebuildingAsync` before it starts.
+
 ## Context
 
 Bulk rebuilds must run on the server (so they survive the browser leaving), refuse duplicates,

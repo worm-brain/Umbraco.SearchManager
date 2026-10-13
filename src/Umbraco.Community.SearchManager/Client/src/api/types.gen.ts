@@ -249,7 +249,7 @@ export type RebuildRun = {
 
 export type RebuildStatus = 'Queued' | 'Running' | 'Succeeded' | 'Failed' | 'Cancelled';
 
-export type RebuildTrigger = 'User' | 'Other';
+export type RebuildTrigger = 'User' | 'Other' | 'Startup';
 
 export type SearchManagerSettings = {
     hideCoreExamineDashboard: boolean;

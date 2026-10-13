@@ -75,4 +75,37 @@ internal static partial class RebuildLog
         Exception exception,
         string eventType
     );
+
+    /// <summary>A core Examine rebuild Search Manager ran in the background for Umbraco failed.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="exception">Why.</param>
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "A core Examine rebuild started outside Search Manager failed"
+    )]
+    public static partial void ExternalRebuildFailed(this ILogger logger, Exception exception);
+
+    /// <summary>
+    /// Something replaced Umbraco's index rebuilder after Search Manager decorated it, so rebuilds
+    /// started outside Search Manager are not recorded.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="rebuilderType">The rebuilder in use.</param>
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Umbraco's index rebuilder is {RebuilderType}, not Search Manager's decorator: core Examine rebuilds started outside Search Manager will not be recorded in its history"
+    )]
+    public static partial void RebuilderNotDecorated(this ILogger logger, string rebuilderType);
+
+    /// <summary>
+    /// Umbraco's index rebuilder was not built with Search Manager's populator wrappers, so failed
+    /// rebuilds of several indexes (the startup rebuild) are recorded as succeeded.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="rebuilderType">The inner rebuilder.</param>
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Search Manager could not wrap the populators of {RebuilderType}: a populator failure during Umbraco's startup rebuild will not be recorded"
+    )]
+    public static partial void PopulatorsNotWrapped(this ILogger logger, string rebuilderType);
 }

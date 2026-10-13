@@ -7,6 +7,7 @@ using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Features.Rebuilds;
+using Umbraco.Community.SearchManager.Features.Rebuilds.External;
 
 namespace Umbraco.Community.SearchManager.Features.Indexes;
 
@@ -124,6 +125,8 @@ internal sealed class ExamineIndexSource(
             // Synchronous processing commits each batch as it is written, so the rebuilder only
             // returns once Lucene has committed everything (Examine's default is to queue writes
             // and commit on a timer, which lets "is rebuilding" clear before the writes land).
+            // The scope tells Search Manager's rebuilder decorator this run is recorded already.
+            using (SearchManagerRebuildScope.Begin())
             using ((index as LuceneIndex)?.WithThreadingMode(IndexThreadingMode.Synchronous))
             {
                 Attempt<IndexRebuildResult> attempt = await indexRebuilder.RebuildIndexAsync(

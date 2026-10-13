@@ -52,8 +52,9 @@ indexes.
 
 Choose the information button in the **Actions** column. The sidebar shows:
 
-- **Rebuild history:** the last 20 rebuilds, newest first, with who started each one, when, how
-  long it took, the document counts before and after, the server, and the error of a failure.
+- **Rebuild history:** the last 20 rebuilds, newest first, with who started each one (a user from
+  Search Manager, **At startup**, or **Started outside Search Manager**), when, how long it took,
+  the document counts before and after, the server, and the error of a failure.
 - **Index properties:** what the index reports about itself, such as its analyzer and folder.
 
 ![The details sidebar for ProductIndex, listing five successful rebuilds and the index properties](../images/index-details.png)

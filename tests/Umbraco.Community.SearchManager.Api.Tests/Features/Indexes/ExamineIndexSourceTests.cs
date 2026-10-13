@@ -8,6 +8,7 @@ using Umbraco.Cms.Infrastructure.Models;
 using Umbraco.Cms.Infrastructure.Services;
 using Umbraco.Community.SearchManager.Core.Indexes;
 using Umbraco.Community.SearchManager.Features.Indexes;
+using Umbraco.Community.SearchManager.Features.Rebuilds.External;
 
 namespace Umbraco.Community.SearchManager.Api.Tests.Features.Indexes;
 
@@ -259,6 +260,27 @@ public class ExamineIndexSourceTests
 
         // Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => rebuild);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_DuringTheRebuild_MarksTheFlowAsSearchManagers()
+    {
+        // Arrange
+        AddIndex("ExternalIndex", documents: 10, fields: []);
+        bool marked = false;
+        _indexRebuilder
+            .RebuildIndexAsync("ExternalIndex", Arg.Any<TimeSpan?>(), false)
+            .Returns(_ =>
+            {
+                marked = SearchManagerRebuildScope.IsActive;
+                return Attempt.Succeed(IndexRebuildResult.Success);
+            });
+
+        // Act
+        await RebuildAsync("ExternalIndex");
+
+        // Assert
+        Assert.Equal((true, false), (marked, SearchManagerRebuildScope.IsActive));
     }
 
     private ExamineIndexSource CreateSource() =>

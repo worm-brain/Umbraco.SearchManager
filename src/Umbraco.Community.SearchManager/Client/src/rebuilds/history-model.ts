@@ -1,4 +1,5 @@
 import type { RebuildHistoryEntry } from "../api/types.gen.js";
+import type { TermCall } from "../shared/term-call.js";
 import { indexKey } from "./rebuild-model.js";
 
 /** A past time as a value and unit for `localize.relativeTime` (the value is negative or zero). */
@@ -33,6 +34,27 @@ export function agoParts(from: string, now = new Date()): AgoParts {
     if (seconds >= length) return { value: -Math.floor(seconds / length), unit };
   }
   return { value: -seconds || 0, unit: "second" };
+}
+
+/**
+ * Who or what started a recorded rebuild, as the history shows it: the user for a Search Manager
+ * rebuild, "At startup" for Umbraco's own rebuild after the site started, and "Started outside
+ * Search Manager" for everything else (and for a user entry with no name).
+ *
+ * @param entry - The recorded rebuild.
+ * @returns The term to localize.
+ */
+export function historyTriggerTerm(entry: Pick<RebuildHistoryEntry, "trigger" | "triggeredBy">): TermCall {
+  switch (entry.trigger) {
+    case "User":
+      return entry.triggeredBy
+        ? ["searchManager_historyTriggerUser", entry.triggeredBy]
+        : ["searchManager_historyTriggerOther"];
+    case "Startup":
+      return ["searchManager_historyTriggerStartup"];
+    default:
+      return ["searchManager_historyTriggerOther"];
+  }
 }
 
 /**

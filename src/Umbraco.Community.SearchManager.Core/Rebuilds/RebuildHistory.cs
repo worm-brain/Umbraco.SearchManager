@@ -10,10 +10,16 @@ public enum RebuildTrigger
     User,
 
     /// <summary>
-    /// Something outside Search Manager (Umbraco Search's own UI, a content type change, another
-    /// package); the entry names no user.
+    /// Something outside Search Manager (Umbraco Search's own UI, the core Examine dashboard, a
+    /// language change, another package); the entry names no user.
     /// </summary>
     Other,
+
+    /// <summary>
+    /// Umbraco's own rebuild of empty (or, on a cold boot, all) core Examine indexes shortly after
+    /// the site started; the entry names no user.
+    /// </summary>
+    Startup,
 }
 
 /// <summary>One finished rebuild of one index, as the history keeps it.</summary>

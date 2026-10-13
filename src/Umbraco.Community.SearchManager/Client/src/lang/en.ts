@@ -244,6 +244,7 @@ export default {
     detailsNoProperties: "This index reports no properties.",
     historyTriggerUser: (name: string) => `${name}, from Search Manager`,
     historyTriggerOther: "Started outside Search Manager",
+    historyTriggerStartup: "At startup",
     historySucceeded: "Succeeded",
     historyFailed: "Failed",
     historyDetail: (duration: string, before: string, after: string, server: string) =>

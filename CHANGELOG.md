@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The rebuild history records core Examine rebuilds started outside Search Manager: Umbraco's
+  rebuild of empty indexes after the site starts as **At startup**, and rebuilds from the core
+  Examine dashboard, a language change or another package as **Started outside Search Manager**,
+  with document counts and the error of a failure.
+
 ## [18.0.0] - 2026-10-12
 
 The first release for Umbraco 18, with the same features as 17.0.0.
