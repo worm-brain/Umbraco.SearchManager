@@ -9,6 +9,7 @@
     <PackageId>Umbraco.Community.SearchManager.Core</PackageId>
     <!-- Versioned with the package for each major, so source packages reference the matching line. -->
     <Version>$(UmbracoMajor).0.0-dev</Version>
+    <Title>Umbraco Search Manager Core</Title>
     <Description>Contracts and shared logic for Umbraco Search Manager. Reference this to add a search source.</Description>
     <PackageTags>umbraco;search;examine;lucene</PackageTags>
     <NuGetReadmeSource>README.Core.md</NuGetReadmeSource>

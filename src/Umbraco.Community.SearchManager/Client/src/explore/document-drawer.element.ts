@@ -250,30 +250,33 @@ export class SearchManagerDocumentDrawerElement extends UmbLitElement {
     return html`
       <div class="row">
         <dt>${name}</dt>
-        <dd>${date ? html`${date}<small class="sub">${value}</small>` : value}</dd>
-        <div class="buttons">
-          ${
-            include
-              ? html`
-                  <uui-button
-                    compact
-                    look="default"
-                    label=${this.localize.term("searchManager_documentFilterFor", name, value)}
-                    @click=${() => this.dispatchEvent(new SearchManagerAddFilterEvent(include))}
-                    ><umb-icon name="icon-zoom-in"></umb-icon
-                  ></uui-button>
-                  <uui-button
-                    compact
-                    look="default"
-                    color="danger"
-                    label=${this.localize.term("searchManager_documentFilterOut", name, value)}
-                    @click=${() => this.dispatchEvent(new SearchManagerAddFilterEvent({ ...include, exclude: true }))}
-                    ><umb-icon name="icon-zoom-out"></umb-icon
-                  ></uui-button>
-                `
-              : nothing
-          }
-        </div>
+        <!-- The filter buttons sit inside the dd: a dl's row div may hold only dt and dd. -->
+        <dd>
+          <span class="value">${date ? html`${date}<small class="sub">${value}</small>` : value}</span>
+          <div class="buttons">
+            ${
+              include
+                ? html`
+                    <uui-button
+                      compact
+                      look="default"
+                      label=${this.localize.term("searchManager_documentFilterFor", name, value)}
+                      @click=${() => this.dispatchEvent(new SearchManagerAddFilterEvent(include))}
+                      ><umb-icon name="icon-zoom-in"></umb-icon
+                    ></uui-button>
+                    <uui-button
+                      compact
+                      look="default"
+                      color="danger"
+                      label=${this.localize.term("searchManager_documentFilterOut", name, value)}
+                      @click=${() => this.dispatchEvent(new SearchManagerAddFilterEvent({ ...include, exclude: true }))}
+                      ><umb-icon name="icon-zoom-out"></umb-icon
+                    ></uui-button>
+                  `
+                : nothing
+            }
+          </div>
+        </dd>
       </div>
     `;
   }
@@ -329,7 +332,7 @@ export class SearchManagerDocumentDrawerElement extends UmbLitElement {
 
       .row {
         display: grid;
-        grid-template-columns: minmax(8rem, 0.9fr) minmax(0, 1.6fr) auto;
+        grid-template-columns: minmax(8rem, 0.9fr) minmax(0, 1.6fr);
         gap: var(--uui-size-space-2);
         align-items: start;
         padding: var(--uui-size-space-1) 0;
@@ -343,7 +346,14 @@ export class SearchManagerDocumentDrawerElement extends UmbLitElement {
       }
 
       dd {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: var(--uui-size-space-2);
+        align-items: start;
         margin: 0;
+      }
+
+      .value {
         overflow-wrap: anywhere;
         white-space: pre-wrap;
       }
