@@ -1,0 +1,13 @@
+# gitleaks suppression file: one accepted finding per line, by fingerprint.
+#
+# The Security workflow's secret scan (.github/scripts/secret-scan.ps1) fails on any secret gitleaks
+# finds in the commit history. When a finding is a false positive or an accepted test fixture, add its
+# fingerprint here, with a comment saying who accepted it, why and when, so it does not fail later runs.
+# Whole files that only ever hold development values belong in the .gitleaks.toml allowlist instead.
+#
+# A fingerprint looks like:  <commit-sha>:<file-path>:<rule-id>:<line-number>
+# gitleaks prints the exact fingerprint for each finding; copy it verbatim.
+#
+# Example:
+#   # Test fixture, not a real key. Accepted by @worm-brain 2026-10-14.
+#   0adc1e2f...:tests/Some.Tests/Fixtures/sample.json:generic-api-key:12

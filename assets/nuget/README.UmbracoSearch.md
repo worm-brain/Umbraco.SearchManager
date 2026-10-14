@@ -31,7 +31,7 @@ It brings in Umbraco Search Manager itself. No configuration is needed.
 
 ## Documentation
 
-- [Use it with Umbraco Search](https://github.com/worm-brain/Umbraco.SearchManager/blob/main/docs/how-to/use-with-umbraco-search.md)
-- [Documentation](https://github.com/worm-brain/Umbraco.SearchManager/blob/main/docs/index.md)
+- [Documentation](https://github.com/worm-brain/Umbraco.SearchManager/blob/main/docs/index.md),
+  including how to use Search Manager with Umbraco Search
 
 MIT licence.

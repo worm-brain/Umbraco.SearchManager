@@ -18,6 +18,9 @@
       Include="Umbraco.Cms.Search.Provider.Examine"
       VersionOverride="$(UmbracoSearchDevVersion)"
     />
+    <!-- Patched versions of Umbraco's transitive dependencies (Directory.Packages.props). Remove once Umbraco ships them. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />

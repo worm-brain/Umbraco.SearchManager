@@ -1,0 +1,61 @@
+# Dependabot keeps the dependencies current: one grouped pull request per ecosystem, once a month, so the
+# updates arrive together and cost one CI run each. The groups take minor and patch updates only, so a
+# major update arrives as its own pull request. The workflows pin actions to full commit SHAs with the tag
+# in a trailing comment; Dependabot moves the SHA and the comment together.
+#
+# The ignore rules hold back only versions this repository chooses on purpose, so one of them can never
+# make a grouped pull request unmergeable.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: ci
+
+  # Every .NET project, through Directory.Packages.props (central package management).
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      nuget:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: build
+    ignore:
+      # The packages compile against these, and their version is the supported range the packages declare
+      # to NuGet (UmbracoPackageRange and UmbracoSearchRange): it moves only by decision, never by update.
+      - dependency-name: "Umbraco.Cms.Web.Website"
+      - dependency-name: "Umbraco.Cms.Api.Management"
+      - dependency-name: "Umbraco.Cms.Examine.Lucene"
+      - dependency-name: "Umbraco.Cms.Search.Core"
+      - dependency-name: "Umbraco.Cms.Search.Provider.Examine"
+      # Each package line builds against one Umbraco major (CMS and Umbraco Search alike, which share
+      # their majors): the dev versions the tests and samples run move within it.
+      - dependency-name: "Umbraco.*"
+        update-types: ["version-update:semver-major"]
+      # The sample sites name this version again in their AppLocalIcu setting, which must match it.
+      - dependency-name: "Microsoft.ICU.ICU4C.Runtime"
+
+  # The backoffice client.
+  - package-ecosystem: bun
+    directory: /src/Umbraco.Community.SearchManager/Client
+    schedule:
+      interval: monthly
+    groups:
+      bun:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: build
+    ignore:
+      # The client builds against the backoffice of the default Umbraco major.
+      - dependency-name: "@umbraco-cms/*"
+        update-types: ["version-update:semver-major"]

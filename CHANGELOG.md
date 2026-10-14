@@ -6,13 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [18.1.0] - 2026-10-13
+Nothing has been released yet. The changes are grouped by the release they are planned for; each
+group moves under its own dated `## ` heading in the commit that is tagged.
 
-The same changes as 17.1.0, for Umbraco 18.
+### [17.1.0] and [18.1.0]
 
-## [17.1.0] - 2026-10-13
-
-### Added
+#### Added
 
 - Diagnose > Analyzer: type a text and a search and see, side by side for two indexes, how each
   index's analyzer turns the text into terms step by step (removed, changed and added terms
@@ -49,7 +48,7 @@ The same changes as 17.1.0, for Umbraco 18.
 - A "Show in search indexes" action on documents in the content tree, for users with Settings
   access, opens the same answer in a sidebar.
 
-### Changed
+#### Changed
 
 - Explore: the fields panel counts a field without its own filters, so after picking a value the
   field's other values stay listed with their counts.
@@ -58,20 +57,16 @@ The same changes as 17.1.0, for Umbraco 18.
 - Explore: Umbraco Search indexes start on the site's default language; **No culture (invariant
   content only)** searches content that does not vary.
 
-### Fixed
+#### Fixed
 
 - Explore: chips the server left out of a search are now struck through with the reason.
 - Explore: "1 document" instead of "1 documents".
 
-## [18.0.0] - 2026-10-12
+### [17.0.0] and [18.0.0]
 
-The first release for Umbraco 18, with the same features as 17.0.0.
+The first release: 17.0.0 for Umbraco 17 and 18.0.0 for Umbraco 18, with the same features.
 
-## [17.0.0] - 2026-10-12
-
-The first release, for Umbraco 17.
-
-### Added
+#### Added
 
 - Settings > Advanced > Search Manager: a workspace with Indexes and Explore views.
 - The Indexes view lists every Examine index with its health, documents, deleted documents,
