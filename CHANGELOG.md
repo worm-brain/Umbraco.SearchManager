@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The Explore document drawer's field list is valid definition-list markup, with the filter buttons
+  inside each value, so screen readers pair every field name with its value.
+
 ## [17.0.0] and [18.0.0] - 2026-10-14
 
 The first release: 17.0.0 for Umbraco 17 and 18.0.0 for Umbraco 18, with the same features.
