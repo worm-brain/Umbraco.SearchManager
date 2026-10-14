@@ -498,8 +498,9 @@ src/Umbraco.Community.SearchManager/Client/e2e/test-results/
 src/Umbraco.Community.SearchManager/Client/e2e/playwright-report/
 
 
-## Claude Code agent worktrees
-.claude/worktrees/
+## Claude Code: local state, worktrees and agents stay out of the repo; only shared settings are committed
+.claude/*
+!.claude/settings.json
 
 # Maintainer-only imports of the private planning repo 
 CLAUDE.local.md
