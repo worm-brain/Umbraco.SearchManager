@@ -69,7 +69,9 @@ uv run tests/package-smoke/smoke_nupkg.py --packages artifacts --major 17
 
 The `SearchSite` samples add Umbraco Search and the adapter. The sample sites install themselves on
 first run (SQLite), seed about 200 content items and a custom `ProductIndex`, and sign in with
-`admin@example.com` / `1234567890` (development only, set in `appsettings.Development.json`). Each
+`admin@example.com` / `1234567890` (development only, set in `appsettings.Development.json`). The
+same file sets a fixed, development-only `Umbraco:CMS:Imaging:HMACSecretKey`, because without one
+the unattended install writes a generated key into `appsettings.json`; never commit a key there. Each
 runs on one Umbraco major: a solution build for the other major skips it, and building or running
 it on its own for the other major fails with the switch to use. The e2e suite starts them on ports
 44390 to 44393.
