@@ -8,7 +8,7 @@ every index on one page and no configuration. On top of that, you can rebuild se
 once in a queue that keeps running when you leave the page, see who rebuilt what and when, and
 search any index with click-to-filter chips instead of hand-written Lucene.
 
-[![NuGet](https://img.shields.io/nuget/v/Umbraco.Community.SearchManager?label=NuGet)](https://www.nuget.org/packages/Umbraco.Community.SearchManager)
+[![NuGet](https://img.shields.io/nuget/vpre/Umbraco.Community.SearchManager?label=NuGet)](https://www.nuget.org/packages/Umbraco.Community.SearchManager)
 [![CI](https://github.com/worm-brain/Umbraco.SearchManager/actions/workflows/ci.yml/badge.svg)](https://github.com/worm-brain/Umbraco.SearchManager/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
