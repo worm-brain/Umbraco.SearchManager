@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <!-- Range per major. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" VersionOverride="10.0.14" />
+    <PackageReference Include="System.Security.Cryptography.Xml" VersionOverride="10.0.14" />
     <PackageReference Include="Umbraco.Cms.Web.Website" />
     <PackageReference Include="Umbraco.Cms.Api.Management" />
     <PackageReference Include="Umbraco.Cms.Examine.Lucene" />
