@@ -17,15 +17,15 @@
     "generate": "bun scripts/generate-openapi.ts https://localhost:44380/umbraco/swagger/search-manager/swagger.json"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
     "@hey-api/openapi-ts": "^0.99.0",
-    "@playwright/test": "1.64.0",
-    "@types/node": "^26.6.3",
-    "@umbraco-cms/backoffice": "^17.7.0",
+    "@playwright/test": "1.65.1",
+    "@types/node": "^26.6.6",
+    "@umbraco-cms/backoffice": "^17.8.2",
     "happy-dom": "^21.0.4",
-    "prettier": "^3.6.0",
+    "prettier": "^3.10.1",
     "typescript": "^5.9.3",
-    "vite": "^8.3.4",
+    "vite": "^8.3.8",
     "vitest": "^5.1.1"
   }
 }
