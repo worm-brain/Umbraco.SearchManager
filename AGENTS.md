@@ -55,6 +55,7 @@ bun install
 bun run format:check && bun run typecheck && bun run test && bun run build
 bun run e2e               # Playwright against all four sample sites; E2E_SITES=17 for one major
 bun run docs:screenshots  # retake docs/images/ from a running SearchManager.SearchSite17
+bun run docs:demo         # record and render the demo videos into artifacts/demo/ (needs ffmpeg); -- overview for one
 bun run generate          # regenerate src/api/ from the running SearchManager.Site17
 
 # Sample sites; build the client first, because its output is gitignored
